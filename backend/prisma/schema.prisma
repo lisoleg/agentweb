@@ -1,0 +1,245 @@
+// AgentWeb Database Schema
+// Generated for P0 MVP - Core functionality
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =============== User Model ===============
+// Core user entity with authentication data
+model User {
+  id          String   @id @default(uuid())
+  email       String?  @unique
+  username    String   @unique
+  password    String?  // Hashed password, null for DID-only auth
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  lastLoginAt DateTime?
+
+  // Relations
+  did         DID?     // One-to-one with DID
+  phiRecords  PhiRecord[] // One-to-many phi records
+  agents      Agent[]  // Agents owned by user
+  votes       Vote[]   // Votes cast by user
+  proposals   Proposal[] // Proposals created by user
+
+  // Status
+  isActive    Boolean  @default(true)
+  isVerified  Boolean  @default(false)
+
+  @@map("users")
+}
+
+// =============== DID Model ===============
+// W3C DID Document storage
+model DID {
+  id          String   @id @default(uuid())
+  did         String   @unique // The actual DID string (did:agentweb:xxx)
+  document    String   // JSON string of DID Document
+  controller   String   // DID controller (usually the same DID)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  userId      String?  @unique
+  user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Verification methods (public keys)
+  verificationMethods Json? // Array of verification method objects
+
+  // Services
+  services    Json? // Array of service endpoint objects
+
+  @@map("dids")
+}
+
+// =============== Verifiable Credential Model ===============
+// W3C VC storage
+model VC {
+  id          String   @id @default(uuid())
+  vcId        String   @unique // VC ID (usually a URN or URL)
+  issuer      String   // DID of issuer
+  subject     String   // DID of subject
+  type        String[] // Array of VC types
+  issuanceDate DateTime
+  expirationDate DateTime?
+  credential  String   // Full VC JSON string
+  proof       String   // Proof JSON string
+  createdAt   DateTime @default(now())
+  revoked     Boolean  @default(false)
+
+  @@map("vcs")
+}
+
+// =============== Phi Record Model ===============
+// Φ value calculation records
+model PhiRecord {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  phiValue    Float    // Calculated Φ value (0-1)
+  timestamp   DateTime @default(now())
+  calculationData Json? // Input data used for calculation
+  metadata    Json? // Additional metadata
+
+  @@index([userId, timestamp])
+  @@map("phi_records")
+}
+
+// =============== Agent Model ===============
+// AI Agent registration on blockchain (off-chain cache)
+model Agent {
+  id          String   @id @default(uuid())
+  agentId     String   @unique // On-chain agent ID
+  ownerId     String
+  owner       User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  endpoint    String? // API endpoint URL
+  capabilities Json? // Array of capability objects
+  reputation  Float    @default(0.0)
+  stakeAmount  Float    @default(0.0)
+  registeredAt DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  active      Boolean  @default(true)
+  txHash      String? // Blockchain transaction hash
+
+  @@map("agents")
+}
+
+// =============== Proposal Model ===============
+// Governance proposals
+model Proposal {
+  id          String   @id @default(uuid())
+  proposalId   String   @unique // On-chain proposal ID
+  creatorId   String
+  creator     User     @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  description String
+  calldata    String? // Call data for execution
+  status      ProposalStatus @default(Active)
+  createdAt   DateTime @default(now())
+  deadline    DateTime
+  executed    Boolean  @default(false)
+  txHash      String? // Blockchain transaction hash
+
+  // Relations
+  votes       Vote[]
+
+  @@map("proposals")
+}
+
+// =============== Vote Model ===============
+// Governance votes
+model Vote {
+  id          String   @id @default(uuid())
+  proposalId  String
+  proposal    Proposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  voterId     String
+  voter       User     @relation(fields: [voterId], references: [id], onDelete: Cascade)
+  support     Boolean  // true=for, false=against
+  weight      Float    @default(1.0) // Voting weight (based on Φ stake)
+  timestamp   DateTime @default(now())
+  txHash      String? // Blockchain transaction hash
+
+  @@unique([proposalId, voterId])
+  @@map("votes")
+}
+
+// =============== Content Model ===============
+// News feed / content publishing
+model Content {
+  id          String   @id @default(uuid())
+  contentId   String   @unique // On-chain content ID
+  authorId    String
+  author      User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  contentHash String   // SHA-256 hash of content
+  bsvTxId     String? // BSV transaction ID
+  phiValue    Float    @default(0.0) // Φ value of content
+  title       String?
+  body        String   // Content body (encrypted or plaintext)
+  metadata    Json? // Additional metadata
+  publishedAt DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Interactions
+  likes       Like[]
+  comments    Comment[]
+
+  @@map("contents")
+}
+
+// =============== Like Model ===============
+// Content likes/interactions
+model Like {
+  id          String   @id @default(uuid())
+  contentId   String
+  content     Content  @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+
+  @@unique([contentId, userId])
+  @@map("likes")
+}
+
+// =============== Comment Model ===============
+// Content comments
+model Comment {
+  id          String   @id @default(uuid())
+  contentId   String
+  content     Content  @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  authorId    String
+  author      User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  body        String
+  parentId    String? // For nested comments
+  parent      Comment? @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies     Comment[] @relation("CommentReplies")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("comments")
+}
+
+// =============== Session Model ===============
+// User sessions (for Redis backup / audit)
+model Session {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token       String   @unique
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+  expiresAt   DateTime
+  revoked     Boolean  @default(false)
+
+  @@map("sessions")
+}
+
+// =============== Enums ===============
+enum ProposalStatus {
+  Active
+  Passed
+  Failed
+  Executed
+  Canceled
+}
+
+// =============== Fulltext Search ===============
+// Add indexes for performance
+@@index([User.username])
+@@index([User.email])
+@@index([DID.did])
+@@index([VC.issuer])
+@@index([VC.subject])
+@@index([PhiRecord.userId, PhiRecord.timestamp])
+@@index([Agent.ownerId])
+@@index([Proposal.status])
+@@index([Proposal.deadline])
+@@index([Content.authorId])
+@@index([Content.publishedAt])

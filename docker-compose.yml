@@ -1,0 +1,125 @@
+version: '3.8'
+
+services:
+  # PostgreSQL database
+  postgres:
+    image: postgres:16-alpine
+    container_name: agentweb-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-agentweb}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-agentweb_secure_password}
+      POSTGRES_DB: ${DB_NAME:-agentweb}
+      TZ: Asia/Shanghai
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    networks:
+      - agentweb-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-agentweb}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis cache and session store
+  redis:
+    image: redis:7-alpine
+    container_name: agentweb-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-redis_secure_password}
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - agentweb-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend API service
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: agentweb-backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: ${PORT:-3000}
+      DATABASE_URL: postgresql://${DB_USER:-agentweb}:${DB_PASSWORD:-agentweb_secure_password}@postgres:5432/${DB_NAME:-agentweb}
+      REDIS_URL: redis://:${REDIS_PASSWORD:-redis_secure_password}@redis:6379
+      JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key-change-in-production}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    ports:
+      - "${PORT:-3000}:3000"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+      - ./backend/prisma:/app/prisma
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - agentweb-network
+    command: npm run dev
+
+  # Frontend development server
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: agentweb-frontend
+    restart: unless-stopped
+    environment:
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:3000}
+      VITE_WS_URL: ${VITE_WS_URL:-ws://localhost:3000}
+    ports:
+      - "${VITE_PORT:-5173}:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    networks:
+      - agentweb-network
+    command: npm run dev
+
+  # Phi Engine (Python FastAPI)
+  phi-engine:
+    build:
+      context: ./phi-engine
+      dockerfile: Dockerfile
+    container_name: agentweb-phi-engine
+    restart: unless-stopped
+    environment:
+      PYTHON_VERSION: "3.11"
+      API_PORT: ${PHI_ENGINE_PORT:-8000}
+      REDIS_URL: redis://:${REDIS_PASSWORD:-redis_secure_password}@redis:6379
+    ports:
+      - "${PHI_ENGINE_PORT:-8000}:8000"
+    volumes:
+      - ./phi-engine:/app
+      - /app/__pycache__
+    depends_on:
+      - redis
+    networks:
+      - agentweb-network
+    command: uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  agentweb-network:
+    driver: bridge

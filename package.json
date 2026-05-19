@@ -1,0 +1,43 @@
+{
+  "name": "agentweb-monorepo",
+  "version": "1.0.0",
+  "description": "AgentWeb - Next-generation digital society infrastructure based on Web5",
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "backend",
+    "blockchain",
+    "phi-engine"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev --workspace=frontend\" \"npm run dev --workspace=backend\"",
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "clean": "rm -rf **/node_modules **/dist **/.turbo",
+    "setup": "npm install && npm run build",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "db:migrate": "cd backend && npx prisma migrate dev",
+    "db:seed": "cd backend && npx ts-node prisma/seed.ts",
+    "contracts:deploy": "cd blockchain && npx hardhat run scripts/deploy.ts --network localhost"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "cross-env": "^7.0.3",
+    "typescript": "^5.3.3",
+    "eslint": "^8.56.0",
+    "prettier": "^3.2.4",
+    "turbo": "^1.11.3"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  },
+  "license": "MIT",
+  "author": "AgentWeb Team",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/agentweb/agentweb.git"
+  }
+}
