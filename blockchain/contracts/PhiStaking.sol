@@ -26,6 +26,7 @@ contract PhiStaking is Ownable, Pausable, ReentrancyGuard {
     struct StakeInfo {
         uint256 amount; // Staked amount
         uint256 phiValue; // Φ value (0-10000, 2 decimals)
+        int256 phiPhase;       // EML phase angle (-3141593 to 3141593, i.e. ±π × 1e6)
         uint256 rewardDebt; // Reward debt
         uint256 lastUpdateTime; // Last update timestamp
         uint256 lockEndTime; // Lock end time (0 = no lock)
@@ -59,6 +60,7 @@ contract PhiStaking is Ownable, Pausable, ReentrancyGuard {
     event Unstaked(address indexed user, uint256 amount, uint256 timestamp);
     event RewardPaid(address indexed user, uint256 reward, uint256 timestamp);
     event PhiValueUpdated(address indexed user, uint256 oldPhiValue, uint256 newPhiValue);
+    event PhiPhaseUpdated(address indexed user, int256 oldPhiPhase, int256 newPhiPhase);
     event RewardRateUpdated(uint256 oldRate, uint256 newRate);
     event LockDurationUpdated(uint256 oldDuration, uint256 newDuration);
 
@@ -182,6 +184,25 @@ contract PhiStaking is Ownable, Pausable, ReentrancyGuard {
     }
 
     /**
+     * @notice Update user's Φ phase angle
+     * @param newPhiPhase New Φ phase (×1e6, -3141593 to 3141593)
+     */
+    function updatePhiPhase(int256 newPhiPhase) external returns (bool) {
+        require(newPhiPhase >= -3141593 && newPhiPhase <= 3141593, "Invalid Φ phase");
+
+        _updateReward(msg.sender);
+
+        StakeInfo storage stakeInfo = s_stakes[msg.sender];
+        int256 oldPhiPhase = stakeInfo.phiPhase;
+        stakeInfo.phiPhase = newPhiPhase;
+        stakeInfo.lastUpdateTime = block.timestamp;
+
+        emit PhiPhaseUpdated(msg.sender, oldPhiPhase, newPhiPhase);
+
+        return true;
+    }
+
+    /**
      * @notice Update user's Φ value
      * @param newPhiValue New Φ value (0-10000)
      */
@@ -235,9 +256,18 @@ contract PhiStaking is Ownable, Pausable, ReentrancyGuard {
             return 0;
         }
 
-        // Voting power = stakeAmount * (1 + phiValue / MAX_PHI_VALUE)
-        uint256 phiMultiplier = 10000 + stakeInfo.phiValue; // 1.0 to 2.0
-        return (stakeInfo.amount * phiMultiplier) / 10000;
+        // Base: stakeAmount * (1 + phiValue / MAX_PHI_VALUE)
+        uint256 phiMultiplier = 10000 + stakeInfo.phiValue;
+
+        // Phase correction: |cos(θ)| boost
+        // phiPhase is in ×1e6, so |cos(θ)| ≈ 1 - (θ²/2) for small θ
+        int256 phaseSquared = (stakeInfo.phiPhase * stakeInfo.phiPhase) / 1e6;
+        uint256 phaseBoost = phaseSquared > 0 ? uint256(phaseSquared) / 2 : 0;
+        if (phaseBoost > 10000) phaseBoost = 10000; // cap at 100%
+
+        uint256 totalMultiplier = phiMultiplier + phaseBoost;
+
+        return (stakeInfo.amount * totalMultiplier) / 10000;
     }
 
     /**

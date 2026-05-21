@@ -137,6 +137,27 @@ class PhiCalculator:
 
         return features
 
+    def calculate_eml_phase(self, features: Dict[str, float]) -> float:
+        """
+        Calculate EML (Euler-Moivre-Laplace) phase angle.
+        Phase = atan2(semantic_direction, integration_magnitude)
+        
+        Based on Paper 2+3: Φ = |Φ|·e^{iθ}
+        - |Φ| (magnitude) = integration degree
+        - θ (phase) = semantic direction angle
+        """
+        feature_values = list(features.values())
+        if len(feature_values) < 2:
+            return 0.0
+        
+        # 语义方向：特征间的角度差异
+        # 取前两个特征构建2D语义方向向量
+        x = feature_values[0] if len(feature_values) > 0 else 0.0
+        y = feature_values[1] if len(feature_values) > 1 else 0.0
+        
+        phase = np.arctan2(y, x)
+        return float(phase)
+
     def calculate_phi(self, interaction_data: Dict[str, Any],
                      user_id: str, content_id: Optional[str] = None) -> Dict[str, Any]:
         """
@@ -191,9 +212,13 @@ class PhiCalculator:
 
             phi_final = self.apply_time_decay(phi_normalized, time_delta)
 
+            # EML 相位计算（Φ = |Φ|·e^{iθ}）
+            phi_phase = self.calculate_eml_phase(features)
+
             result = {
                 "user_id": user_id,
                 "phi_value": round(phi_final, 6),
+                "phi_phase": round(phi_phase, 6),
                 "timestamp": datetime.utcnow().isoformat(),
                 "details": {
                     "features": features,

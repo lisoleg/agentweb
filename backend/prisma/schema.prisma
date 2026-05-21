@@ -27,6 +27,11 @@ model User {
   agents      Agent[]  // Agents owned by user
   votes       Vote[]   // Votes cast by user
   proposals   Proposal[] // Proposals created by user
+  contents    Content[]  // Content authored by user
+  likes       Like[]   // Likes by user
+  comments    Comment[] // Comments by user
+  sessions    Session[] // User sessions
+  actor       Actor?   // Fediverse Actor
 
   // Status
   isActive    Boolean  @default(true)
@@ -83,6 +88,7 @@ model PhiRecord {
   userId      String
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   phiValue    Float    // Calculated Φ value (0-1)
+  phiPhase    Float    @default(0.0) // EML phase angle (-π to π)
   timestamp   DateTime @default(now())
   calculationData Json? // Input data used for calculation
   metadata    Json? // Additional metadata
@@ -156,7 +162,7 @@ model Content {
   id          String   @id @default(uuid())
   contentId   String   @unique // On-chain content ID
   authorId    String
-  author      User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  author      User     @relation("ContentAuthor", fields: [authorId], references: [id], onDelete: Cascade)
   contentHash String   // SHA-256 hash of content
   bsvTxId     String? // BSV transaction ID
   phiValue    Float    @default(0.0) // Φ value of content
@@ -180,7 +186,7 @@ model Like {
   contentId   String
   content     Content  @relation(fields: [contentId], references: [id], onDelete: Cascade)
   userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User     @relation("LikeUser", fields: [userId], references: [id], onDelete: Cascade)
   createdAt   DateTime @default(now())
 
   @@unique([contentId, userId])
@@ -194,7 +200,7 @@ model Comment {
   contentId   String
   content     Content  @relation(fields: [contentId], references: [id], onDelete: Cascade)
   authorId    String
-  author      User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  author      User     @relation("CommentAuthor", fields: [authorId], references: [id], onDelete: Cascade)
   body        String
   parentId    String? // For nested comments
   parent      Comment? @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
@@ -210,7 +216,7 @@ model Comment {
 model Session {
   id          String   @id @default(uuid())
   userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User     @relation("SessionUser", fields: [userId], references: [id], onDelete: Cascade)
   token       String   @unique
   ipAddress   String?
   userAgent   String?
@@ -231,15 +237,241 @@ enum ProposalStatus {
 }
 
 // =============== Fulltext Search ===============
-// Add indexes for performance
-@@index([User.username])
-@@index([User.email])
-@@index([DID.did])
-@@index([VC.issuer])
-@@index([VC.subject])
-@@index([PhiRecord.userId, PhiRecord.timestamp])
-@@index([Agent.ownerId])
-@@index([Proposal.status])
-@@index([Proposal.deadline])
-@@index([Content.authorId])
-@@index([Content.publishedAt])
+// Indexes are defined inside each model block above
+
+// =============== Actor Model (Fediverse/ActivityPub) ===============
+// Fediverse Actor - implements ActivityPub Actor
+model Actor {
+  id            String   @id @default(cuid())
+  did           String   @unique  // DID (W3C) or Fediverse URI
+  username      String   @unique
+  type          ActorType @default(Person) // Person | Service | Application | Agent
+  
+  // ActivityPub endpoints
+  inbox         String   // Inbox URL
+  outbox        String   // Outbox URL
+  followers     String   // Followers collection URL
+  following     String   // Following collection URL
+  publicKey     String   // Public key PEM format
+  privateKey    String   // Private key (encrypted)
+  
+  // Four-Token Wallets (embedded)
+  calcToken      Float    @default(0)  // 算元 (Calc-Token) balance
+  witToken       String?  // 智元 (Wit-Token) balance (on-chain)
+  wordTokenUsed Float    @default(0)  // 词元 (Word-Token) used
+  passToken      String?  // 通证 (Pass-Token) ID
+  
+  // Relations
+  user           User?    @relation("ActorUser", fields: [userId], references: [id])
+  userId         String?  @unique
+
+  activities     Activity[] // Activities created by this actor
+  inboxActivities Inbox[]    // Activities received (inbox)
+  outboxActivities Outbox[]   // Activities sent (outbox)
+
+  followersRel   Follow[] @relation("Follower")
+  followingRel   Follow[] @relation("Following")
+  tokens         Token[]    // Tokens owned by this actor
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@map("actors")
+}
+
+// =============== Activity Model (ActivityPub) ===============
+// ActivityPub Activity - Create, Follow, Like, Announce, Offer, Accept, Consume, Reward
+model Activity {
+  id             String      @id @default(cuid())
+  activityId     String      @unique  // Full Activity ID (URI)
+  type           ActivityType
+  actorId        String
+  actor          Actor       @relation(fields: [actorId], references: [id])
+  
+  objectId       String?     // Object ID (Note, Article, Token, etc.)
+  objectType     String?     // Object type (Note, Article, etc.)
+  objectData     String?     // Full object JSON string
+  
+  targetId       String?     // Target Actor ID (optional)
+  
+  // Token issuance trigger (交易即发行)
+  tokenIssuance  TokenIssuance?
+  tokenIssuanceId String?     @unique
+
+  // Phase winding / topological excitation data
+  phaseGradient   Float?     // Φ phase gradient
+  windingNumber   Int?       // Winding number (缠绕数)
+
+  // Reverse relations
+  inboxActivities Inbox[]
+  outboxActivities Outbox[]
+  genesisTokens   Token[]      // Tokens whose genesis was this activity
+
+  publishedAt    DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  
+  @@index([actorId, publishedAt])
+  @@index([type])
+  @@map("activities")
+}
+
+// =============== Inbox Model ===============
+model Inbox {
+  id           String   @id @default(cuid())
+  actorId      String
+  actor        Actor    @relation(fields: [actorId], references: [id])
+  activityId   String   @unique
+  activity     Activity @relation("InboxActivity", fields: [activityId], references: [id])
+  isRead       Boolean  @default(false)
+  receivedAt   DateTime @default(now())
+  
+  @@map("inboxes")
+}
+
+// =============== Outbox Model ===============
+model Outbox {
+  id           String   @id @default(cuid())
+  actorId      String
+  actor        Actor    @relation(fields: [actorId], references: [id])
+  activityId   String   @unique
+  activity     Activity @relation("OutboxActivity", fields: [activityId], references: [id])
+  publishedAt  DateTime @default(now())
+  
+  @@map("outboxes")
+}
+
+// =============== Follow Model ===============
+model Follow {
+  id           String   @id @default(cuid())
+  followerId   String
+  follower     Actor    @relation("Follower", fields: [followerId], references: [id])
+  followingId  String
+  following    Actor    @relation("Following", fields: [followingId], references: [id])
+  createdAt    DateTime @default(now())
+  
+  @@unique([followerId, followingId])
+  @@map("follows")
+}
+
+// =============== TokenIssuance Model (交易即发行) ===============
+// Token issuance trigger - binding to Activity
+model TokenIssuance {
+  id               String       @id @default(cuid())
+  activityId       String       @unique
+  activity         Activity     @relation(fields: [activityId], references: [id])
+
+  tokenType        TokenType    // CALC | WIT | WORD | PASS
+  amount           Float?
+  genesisActivity  String       // Binding to trigger activity
+  phaseWinding    Float?       // Phase winding value
+  windingNumber    Int?         // Winding number (>=1 triggers issuance)
+
+  issuedAt         DateTime     @default(now())
+
+  // The issued token
+  issuedToken      Token?
+
+  @@map("token_issuances")
+}
+
+// =============== Four-Token Model (四元 Token) ===============
+// Four-Token System: Calc-Token, Wit-Token, Word-Token, Pass-Token
+model Token {
+  id             String      @id @default(cuid())
+  tokenId         String      @unique  // Token URI/ID
+  
+  type            TokenType    // CALC | WIT | WORD | PASS
+  subType         String?     // Sub-type (e.g., "Calc-AI-Call", "Wit-RWA", etc.)
+  
+  // Amount/Value
+  amount          Float?      // For Calc-Token (amount) and Wit-Token (value)
+  dataHash        String?     // For Word-Token (data/content hash)
+  credentialId    String?     // For Pass-Token (DID/VC ID)
+  
+  // Lifecycle state (交易即发行 -> 流转即回收)
+  status          TokenStatus @default(Null)  // Null | Issued | Active | Consumed | Settled | Expired | Recycled
+  
+  // Genesis (binding to trigger activity)
+  genesisActivityId String?     // Activity ID that triggered issuance
+  genesisActivity  Activity?    @relation(fields: [genesisActivityId], references: [id])
+  
+  // Owner
+  ownerId         String
+  owner           Actor       @relation(fields: [ownerId], references: [id])
+  
+  // Timestamps
+  issuedAt        DateTime    @default(now())
+  activatedAt     DateTime?
+  consumedAt      DateTime?    // For Calc/Word-Token (波核耗散)
+  settledAt       DateTime?    // For Wit-Token (粒核转移/核销)
+  expiredAt       DateTime?    // For Pass-Token (身份/会话过期)
+  recycledAt      DateTime?    // JIAJIA 式写通知回收
+  
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  
+  // Relations
+  writeNotices    WriteNotice[] // JIAJIA write-notices
+  
+  @@index([ownerId, status])
+  @@index([type, status])
+  @@map("tokens")
+}
+
+// =============== WriteNotice Model (JIAJIA 式写通知回收) ===============
+// Write-notice attached to lock (resourceLock/sessionLock)
+model WriteNotice {
+  id           String      @id @default(cuid())
+  tokenId      String      // Token ID
+  token         Token       @relation(fields: [tokenId], references: [id])
+  
+  lockId        String      // resourceLock or sessionLock ID
+  lockType      String      // "resource" | "session" | "other"
+  status        String      // "Recycled" | "Invalid" | etc.
+  noticeData    String?     // Additional notice data (JSON)
+  
+  createdAt     DateTime    @default(now())
+  
+  @@index([lockId, status])
+  @@map("write_notices")
+}
+
+// =============== Enums ===============
+enum ActorType {
+  Person
+  Service
+  Application
+  Agent
+}
+
+enum ActivityType {
+  Create
+  Follow
+  Like
+  Announce
+  Offer
+  Accept
+  Reject
+  Consume
+  Reward
+  Delete
+  Update
+}
+
+enum TokenType {
+  CALC  // 算元 (Calc-Token) - Wave Kernel (波核)
+  WIT   // 智元 (Wit-Token) - Particle Kernel (粒核)
+  WORD  // 词元 (Word-Token) - Wave Kernel (波核)
+  PASS  // 通证 (Pass-Token) - Particle Kernel (粒核)
+}
+
+enum TokenStatus {
+  Null      // Token 不存在（相位未激发）
+  Issued    // 已发行（交易即发行）
+  Active    // 活跃（在流通中）
+  Consumed  // 已消耗（算元/词元回收 - 波核耗散）
+  Settled   // 已结算（智元回收 - 粒核转移/核销）
+  Expired   // 已过期（通证回收 - 身份/会话过期）
+  Recycled  // 已回收（JIAJIA 式写通知）
+}
+

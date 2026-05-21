@@ -1,15 +1,27 @@
 """
 Phi Engine API Routes
 FastAPI endpoints for Φ value calculation
+
+v2.0：接入太乙AGI后端桥接层（taiyi_bridge）
+  - /api/v1/phi/compute：优先AGI后端，fallback本地
+  - /api/v1/phi/calculate：保持兼容，内部也走桥接层
 """
 
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from datetime import datetime
 from loguru import logger
 from calculator import PhiCalculator, calculate_phi
+
+# ── 新增：导入太乙AGI桥接层 ──
+from taiyi_bridge import (
+    TaiyiBridge,
+    PhiComputeRequest,
+    PhiComputeResult,
+    get_taiyi_bridge,
+)
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -183,6 +195,75 @@ async def get_phi_distribution():
         },
         "message": "Not implemented yet"
     }
+
+# ═════════════════════════════════════
+#  太乙AGI 桥接端点（v2.0 新增）
+# ═════════════════════════════════════
+
+@app.post("/api/v1/phi/compute")
+async def compute_phi_agi(
+    i_field: Dict[str, Any],
+    c_field: Dict[str, Any],
+    g_field: Dict[str, Any],
+    calc_budget: int = 1000,
+    use_fpga: bool = False,
+):
+    """
+    Φ场计算（对接太乙AGI后端）
+
+    优先调用 AGI 后端，不可用时自动 fallback 到本地计算。
+    IGCTR: ΔΦ ≤ α(ΔI) + β(ΔC) + γ(ΔG)
+    """
+    bridge = get_taiyi_bridge()
+    try:
+        result = await bridge.compute_phi(
+            i_field=i_field,
+            c_field=c_field,
+            g_field=g_field,
+            calc_budget=calc_budget,
+            use_fpga=use_fpga,
+        )
+        return {
+            "phi_value": result.phi_value,
+            "resonance_score": result.resonance_score,
+            "active_modules": result.active_modules,
+            "proved_theorems": result.proved_theorems,
+            "igctr_terms": result.igctr_terms,
+            "execution_time_ms": result.execution_time_ms,
+            "source": result.source,
+            "agi_backend_reachable": result.agi_backend_reachable,
+        }
+    except Exception as e:
+        logger.error(f"AGI bridge error: {e}")
+        raise HTTPException(status_code=500, detail=f"Φ compute error: {str(e)}")
+
+
+@app.get("/api/v1/agi/health")
+async def agi_health():
+    """检查太乙AGI后端健康状态"""
+    bridge = get_taiyi_bridge()
+    healthy = await bridge.health_check()
+    return {
+        "agi_backend_reachable": healthy,
+        "bridge_stats": bridge.get_stats(),
+    }
+
+
+@app.post("/api/v1/agi/modules/invoke")
+async def invoke_agi_module(
+    module_id: str,
+    input_data: Dict[str, Any],
+    timeout_ms: int = 30000,
+):
+    """调用太乙AGI指定模块（M1-M125）"""
+    bridge = get_taiyi_bridge()
+    result = await bridge.invoke_module(
+        module_id=module_id,
+        input_data=input_data,
+        timeout_ms=timeout_ms,
+    )
+    return result
+
 
 # =============== Startup/Shutdown Events ===============
 

@@ -42,11 +42,15 @@ router.post('/calculate', async (req: Request, res: Response, next: NextFunction
 
     const phiResult = phiResponse.data.data || phiResponse.data;
 
+    // 提取 EML 相位（如果有）
+    const phiPhase = phiResult.phi_phase ?? 0.0;
+
     // Store result in database
     const record = await prisma.phiRecord.create({
       data: {
         userId,
         phiValue: phiResult.phi_value,
+        phiPhase,
         calculationData: interactionData,
         metadata: phiResult.details || {},
       },
@@ -55,6 +59,7 @@ router.post('/calculate', async (req: Request, res: Response, next: NextFunction
     logger.info('Φ calculated and stored', {
       userId,
       phiValue: phiResult.phi_value,
+      phiPhase,
       recordId: record.id,
     });
 
@@ -62,6 +67,7 @@ router.post('/calculate', async (req: Request, res: Response, next: NextFunction
       code: 0,
       data: {
         phiValue: phiResult.phi_value,
+        phiPhase,
         recordId: record.id,
         details: phiResult.details,
       },

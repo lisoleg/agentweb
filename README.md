@@ -1,293 +1,201 @@
-# AgentWeb - 西格玛云
+# AgentWeb Sigma Cloud V2.0
 
-基于Web5的下一代数字社会基础设施，构建人机和谐共存的数字共产主义新范式。
+<div align="center">
 
-## 📋 项目简介
+**基于信息几何与意识场统一理论的去中心化社交网络平台**
 
-AgentWeb是一个创新的去中心化应用平台，整合了以下核心技术：
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Version](https://img.shields.io/badge/version-2.0.0-green.svg)](package.json)
+[![Node](https://img.shields.io/badge/node-%3E%3D18-green.svg)](https://nodejs.org)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue.svg)](https://www.typescriptlang.org/)
 
-- **整合信息理论（Φ价值度量）**：统一的价值和智能度量标准
-- **虚时演化共识**：突破拜占庭容错极限（49%容错）
-- **全息边界存储**：O(N²/³)存储复杂度优化
-- **W3C DID/VC标准**：去中心化身份和可验证凭证
+[English](#english) | [中文](#chinese)
 
-## 🏗️ 技术架构
-
-### 三层架构
-
-```
-┌─────────────────────────────────────────────────────┐
-│                  人侧 (Yandex浏览器)                  │
-│  ┌─────────────┐ ┌──────────────┐ ┌──────────────┐ │
-│  │ 本地Φ引擎   │ │ 无感DID      │ │ 隐私保护     │ │
-│  └─────────────┘ └──────────────┘ └──────────────┘ │
-├─────────────────────────────────────────────────────┤
-│                  机侧 (Ethereum L2)                 │
-│  ┌─────────────┐ ┌──────────────┐ ┌──────────────┐ │
-│  │ Agent注册   │ │ Φ Staking    │ │ ZKP验证     │ │
-│  └─────────────┘ └──────────────┘ └──────────────┘ │
-├─────────────────────────────────────────────────────┤
-│                  天侧 (BSV区块链)                    │
-│  ┌─────────────┐ ┌──────────────┐ ┌──────────────┐ │
-│  │ Metanet协议 │ │ 微支付通道   │ │ SPV轻节点   │ │
-│  └─────────────┘ └──────────────┘ └──────────────┘ │
-└─────────────────────────────────────────────────────┘
-```
-
-### 技术栈
-
-- **前端**: React 18 + TypeScript + Vite + Material-UI v5
-- **后端**: Node.js + Express + TypeScript + Prisma ORM
-- **区块链**: Solidity + Hardhat + ethers.js v6
-- **Φ引擎**: Python + FastAPI + NumPy + SciPy
-- **共识模块**: Rust (可选)
-- **数据库**: PostgreSQL + Redis
-- **存储**: IPFS (可选) + BSV Metanet
-
-## 📁 项目结构
-
-```
-agentweb/
-├── frontend/                 # 前端应用
-│   ├── src/
-│   │   ├── components/      # 可复用组件
-│   │   │   ├── DIDDisplay.tsx
-│   │   │   ├── VCList.tsx
-│   │   │   ├── PhiDashboard.tsx
-│   │   │   └── AgentCard.tsx
-│   │   ├── pages/          # 页面组件
-│   │   │   ├── Login.tsx
-│   │   │   ├── Dashboard.tsx
-│   │   │   ├── Identity.tsx
-│   │   │   ├── AgentWorkbench.tsx
-│   │   │   ├── Governance.tsx
-│   │   │   └── NewsFeed.tsx
-│   │   ├── services/       # API服务
-│   │   ├── hooks/          # 自定义Hooks
-│   │   ├── contexts/       # React Context
-│   │   └── utils/          # 工具函数
-│   └── package.json
-├── backend/                 # 后端API服务
-│   ├── src/
-│   │   ├── api/           # API路由
-│   │   ├── services/      # 业务逻辑
-│   │   ├── middleware/    # 中间件
-│   │   ├── utils/         # 工具函数
-│   │   └── models/        # 数据模型
-│   ├── prisma/
-│   │   └── schema.prisma  # 数据库Schema
-│   └── package.json
-├── blockchain/              # 智能合约
-│   ├── contracts/
-│   │   ├── AgentRegistry.sol
-│   │   └── PhiStaking.sol
-│   ├── scripts/            # 部署脚本
-│   ├── test/              # 测试
-│   └── hardhat.config.ts
-├── phi-engine/            # Φ计算引擎
-│   ├── src/
-│   │   ├── calculator.py
-│   │   ├── api.py
-│   │   └── main.py
-│   └── requirements.txt
-├── scripts/               # 工具脚本
-├── docker-compose.yml      # Docker编排
-├── package.json           # 根目录Monorepo配置
-└── tsconfig.json          # TypeScript配置
-```
-
-## 🚀 快速开始
-
-### 环境要求
-
-- Node.js >= 18.0.0
-- Python >= 3.11
-- PostgreSQL >= 14
-- Redis >= 6
-- Docker & Docker Compose (可选)
-
-### 安装步骤
-
-#### 1. 克隆项目
-
-```bash
-git clone <repository-url>
-cd agentweb
-```
-
-#### 2. 安装依赖
-
-```bash
-# 安装所有模块依赖
-npm install
-
-# 或分别安装
-cd frontend && npm install
-cd ../backend && npm install
-cd ../phi-engine && pip install -r requirements.txt
-```
-
-#### 3. 配置环境变量
-
-```bash
-cp .env.example .env
-```
-
-编辑 `.env` 文件，配置以下环境变量：
-
-```env
-# 数据库配置
-DATABASE_URL="postgresql://user:password@localhost:5432/agentweb"
-
-# Redis配置
-REDIS_URL="redis://localhost:6379"
-
-# JWT配置
-JWT_SECRET="your-secret-key"
-JWT_EXPIRES_IN="7d"
-
-# Ethereum配置
-ETH_RPC_URL="https://mainnet.optimism.io"
-ETH_PRIVATE_KEY="your-private-key"
-CONTRACT_ADDRESS="your-contract-address"
-
-# BSV配置
-BSV_NODE_URL="https://api.bsvblockchain.com"
-BSV_PRIVATE_KEY="your-bsv-private-key"
-
-# Φ引擎配置
-PHI_ENGINE_URL="http://localhost:8001"
-```
-
-#### 4. 启动服务
-
-##### 使用Docker（推荐）
-
-```bash
-docker-compose up -d
-```
-
-##### 手动启动
-
-```bash
-# 启动PostgreSQL和Redis
-docker-compose up -d postgres redis
-
-# 初始化数据库
-cd backend
-npx prisma migrate deploy
-npx prisma db seed
-
-# 启动后端服务
-npm run dev
-
-# 新开终端 - 启动Φ引擎
-cd phi-engine
-uvicorn src.main:app --reload --port 8001
-
-# 新开终端 - 启动前端
-cd frontend
-npm run dev
-```
-
-### 访问应用
-
-- 前端应用: http://localhost:5173
-- 后端API: http://localhost:3000
-- Φ引擎API: http://localhost:8001
-- API文档: http://localhost:3000/api/docs
-
-## 📚 API文档
-
-详细的API文档请参考 [api_documentation.md](api_documentation.md)。
-
-### 主要API端点
-
-#### 认证
-- `POST /api/v1/auth/register` - 用户注册
-- `POST /api/v1/auth/login` - 用户登录
-- `POST /api/v1/auth/logout` - 用户登出
-
-#### DID
-- `POST /api/v1/did/create` - 创建DID
-- `GET /api/v1/did/resolve/:did` - 解析DID
-- `PUT /api/v1/did/update` - 更新DID
-
-#### VC
-- `POST /api/v1/vc/issue` - 签发VC
-- `POST /api/v1/vc/verify` - 验证VC
-- `GET /api/v1/vc/list` - 列出VC
-- `POST /api/v1/vc/revoke` - 撤销VC
-
-#### Φ计算
-- `POST /api/v1/phi/calculate` - 计算Φ值
-
-#### Agent
-- `POST /api/v1/agent/register` - 注册Agent
-- `GET /api/v1/agent/list` - 列出Agent
-- `GET /api/v1/agent/:id` - 获取Agent详情
-
-#### 治理
-- `GET /api/v1/governance/proposals` - 列出提案
-- `POST /api/v1/governance/proposals` - 创建提案
-- `POST /api/v1/governance/vote` - 投票
-
-## 🧪 测试
-
-### 运行测试
-
-```bash
-# 所有测试
-npm test
-
-# 后端测试
-cd backend && npm test
-
-# 智能合约测试
-cd blockchain && npx hardhat test
-
-# Φ引擎测试
-cd phi-engine && pytest
-```
-
-### 测试覆盖
-
-- 单元测试：核心业务逻辑
-- 集成测试：API端到端测试
-- 智能合约测试：合约安全审计
-
-## 📖 开发文档
-
-- [PRD文档](../AgentWeb_PRD.md) - 产品需求文档
-- [架构设计](../AgentWeb_Architecture.md) - 系统架构设计
-- [代码摘要](code_summary.md) - 代码模块说明
-- [API文档](api_documentation.md) - API详细文档
-
-## 🤝 贡献指南
-
-1. Fork 本仓库
-2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 创建 Pull Request
-
-## 📄 许可证
-
-本项目采用 MIT 许可证 - 详见 [LICENSE](LICENSE) 文件
-
-## 🙏 致谢
-
-- 复合体理学研究院 - 理论基础
-- W3C DID Working Group - DID/VC标准
-- Ethereum Foundation - L2解决方案
-- Bitcoin SV Association - Metanet协议
-
-## 📞 联系我们
-
-- 项目负责人: 高见远
-- 团队: AgentWeb Development Team
-- 邮箱: contact@agentweb.io
+</div>
 
 ---
 
-**AgentWeb** - 构建人机和谐的数字社会基础设施
+## 中文
+
+### 📖 项目简介
+
+AgentWeb Sigma Cloud V2.0 是一个基于 **IGCTR（信息-几何-意识三重共振）统一理论** 的去中心化社交网络平台。平台将用户信息场（I场）、机器几何场（G场）与云端意识场（C场）通过 Φ 场（整合信息量）进行统一量化，实现无缝 DID 身份、ActivityPub 联邦社交、φ 引擎驱动的内容推荐，以及基于 FPGA 硬件加速的 Φ 场重构。
+
+### 🌟 核心特性
+
+- **四令牌统一场论**：Calc（计算）/ Wit（智慧）/ Word（语言）/ Pass（通行证）四种令牌统一量化数字行为
+- **IGCTR 动力学方程**：`ΔΦ ≤ α(ΔI) + β(ΔC) + γ(ΔG)` — Φ 场变化受 I/C/G 三场共同约束
+- **FPGA-Φ 重构定理**：FPGA 局部重构 ↔ Φ 场拓扑激发，硬件级别的 Φ 场加速
+- **无缝 DID**：设备指纹 + 生物识别 → 自动密钥对生成，无感身份认证
+- **ActivityPub 联邦**：完整支持 Actor/Note/Follow/Like/Announce，接入 Fediverse
+- **φ 引擎**：Python/FastAPI 实现的 Φ 场计算引擎，实时推荐与意识度量
+- **区块链激励**：基于 Hardhat/Solidity 的四令牌 ERC-20 智能合约
+- **三层架构**：人侧（I场）/ 机侧（G场）/ 天侧（C场）分层解耦
+
+### 🏗️ 系统架构
+
+```
+┌─────────────────────────────────────────────┐
+│              天侧 C场（云端意识）              │
+│  φ-Engine (Python/FastAPI) + Redis        │
+│  Φ场计算 / 内容推荐 / 意识度量                │
+└──────────────────┬──────────────────────────┘
+                   │ Φ场数据流
+┌──────────────────▼──────────────────────────┐
+│              机侧 G场（几何/区块链）           │
+│  Backend (Node.js/Express/Prisma)         │
+│  + Blockchain (Hardhat/Solidity)           │
+│  + FPGA Emulator (TypeScript)              │
+└──────────────────┬──────────────────────────┘
+                   │ DID/API
+┌──────────────────▼──────────────────────────┐
+│              人侧 I场（用户交互）              │
+│  Frontend (React/MUI/TypeScript)           │
+│  Web3 Wallet / Biometric Auth               │
+└─────────────────────────────────────────────┘
+```
+
+### 🚀 快速启动
+
+#### 方式一：Docker（推荐）
+
+```bash
+git clone https://github.com/lisoleg/AgentWeb.git
+cd AgentWeb/agentweb
+cp .env.example .env
+# 编辑 .env 填写必要配置
+docker-compose up -d
+```
+
+访问 `http://localhost:3000`
+
+#### 方式二：本地开发
+
+```bash
+# 1. 安装依赖
+cd agentweb && npm install && npm run install:all
+
+# 2. 配置环境变量
+cp .env.example .env
+# 编辑 .env：配置 DATABASE_URL, REDIS_URL, JWT_SECRET 等
+
+# 3. 初始化数据库
+cd backend && npx prisma migrate dev && npx prisma generate
+
+# 4. 启动各服务（各开一个终端）
+cd backend && npm run dev          # :3001
+cd frontend && npm run dev         # :3000
+cd phi-engine && uvicorn main:app --reload  # :8000
+cd fpga-emulator && npm run dev    # :4000
+cd blockchain && npx hardhat node  # :8545
+```
+
+详见 [INSTALL.md](INSTALL.md) 完整安装指南。
+
+### 📁 项目结构
+
+```
+agentweb/
+├── frontend/          # React/MUI 前端（TypeScript）
+├── backend/         # Express/Passport/Prisma 后端
+├── phi-engine/      # Python/FastAPI φ引擎
+├── fpga-emulator/   # TypeScript FPGA模拟器
+├── blockchain/      # Hardhat/Solidity 智能合约
+├── docker-compose.yml
+├── .env.example
+├── package.json     # Monorepo 根配置
+├── INSTALL.md       # 安装指南
+├── USERGUIDE.md     # 用户使用指南
+└── README.md        # 本文件
+```
+
+### 🔧 技术栈
+
+| 层级 | 技术 |
+|------|------|
+| 前端 | React 18, TypeScript, MUI, Web3.js |
+| 后端 | Node.js, Express, Passport.js, Prisma ORM |
+| φ引擎 | Python 3.10+, FastAPI, NumPy, Redis |
+| FPGA模拟 | TypeScript, Jest |
+| 区块链 | Solidity, Hardhat, OpenZeppelin |
+| 数据库 | PostgreSQL 14+ |
+| 缓存 | Redis 6+ |
+| 容器 | Docker, Docker Compose |
+| 联邦协议 | ActivityPub (W3C) |
+
+### 📊 四令牌系统
+
+| 令牌 | 符号 | 含义 | 获取方式 |
+|------|------|------|----------|
+| 计算令牌 | Calc | 计算资源贡献 | FPGA 贡献 / 节点运行 |
+| 智慧令牌 | Wit | 内容质量 weighted by Φ | 优质内容 / 被点赞 |
+| 语言令牌 | Word | 社交互动贡献 | 发帖 / 评论 / 转发 |
+| 通行证 | Pass | 身份与访问权限 | DID 注册 / KYC |
+
+### 📚 文档
+
+- [安装指南（INSTALL.md）](INSTALL.md) — 详细安装与部署
+- [用户使用指南（USERGUIDE.md）](USERGUIDE.md) — 功能使用说明
+- [架构设计文档](AgentWeb_Architecture.md) — 系统架构详解
+- [产品需求文档](AgentWeb_PRD.md) — PRD 与功能列表
+
+### 🤝 贡献
+
+1. Fork 本仓库
+2. 创建功能分支 (`git checkout -b feature/foo`)
+3. 提交更改 (`git commit -am 'Add foo'`)
+4. 推送分支 (`git push origin feature/foo`)
+5. 创建 Pull Request
+
+### 📄 许可证
+
+MIT License — 详见 [LICENSE](LICENSE)
+
+### 📮 联系
+
+- 作者：寇豆码 (Kou)
+- Email：laotie@gmail.com
+- 项目地址：https://github.com/lisoleg/AgentWeb
+
+---
+
+## English
+
+### 📖 Introduction
+
+AgentWeb Sigma Cloud V2.0 is a decentralized social networking platform based on the **IGCTR (Information-Geometry-Consciousness Tri-Resonance) Unified Theory**. The platform unifies user Information Field (I-field), machine Geometric Field (G-field), and cloud Consciousness Field (C-field) through the Φ-field (Integrated Information), enabling seamless DID identity, ActivityPub federation, φ-engine powered content recommendation, and FPGA-accelerated Φ-field reconstruction.
+
+### 🌟 Core Features
+
+- **Four-Token Unified Field Theory**: Calc (Computation) / Wit (Wisdom) / Word (Language) / Pass (Passport) tokens quantifying digital behavior
+- **IGCTR Dynamics**: `ΔΦ ≤ α(ΔI) + β(ΔC) + γ(ΔG)` — Φ-field changes constrained by I/C/G fields
+- **FPGA-Φ Reconstruction Theorem**: FPGA partial reconfiguration ↔ Φ-field topological excitation
+- **Seamless DID**: Device fingerprint + biometrics → automatic key pair generation
+- **ActivityPub Federation**: Full Actor/Note/Follow/Like/Announce support, Fediverse compatible
+- **φ-Engine**: Python/FastAPI Φ-field computation engine for real-time recommendation
+- **Blockchain Incentives**: ERC-20 smart contracts for four-token economy
+- **Three-Layer Architecture**: Human-side (I-field) / Machine-side (G-field) / Sky-side (C-field)
+
+### 🚀 Quick Start
+
+```bash
+git clone https://github.com/lisoleg/AgentWeb.git
+cd AgentWeb/agentweb
+cp .env.example .env
+docker-compose up -d
+```
+
+Visit `http://localhost:3000`
+
+### 📚 Documentation
+
+- [INSTALL.md](INSTALL.md) — Installation Guide
+- [USERGUIDE.md](USERGUIDE.md) — User Guide
+- [Architecture](AgentWeb_Architecture.md) — System Architecture
+- [PRD](AgentWeb_PRD.md) — Product Requirements
+
+### 📄 License
+
+MIT License
+
+---

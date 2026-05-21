@@ -8,6 +8,7 @@ import { z } from 'zod';
 import logger from '../utils/logger';
 import prisma from '@prisma/client';
 import { authMiddleware } from '../middleware/auth';
+import { phiBftConsensus, VoteType } from '../services/phiBftConsensus';
 
 const router = Router();
 
@@ -130,6 +131,15 @@ router.post('/vote', authMiddleware, async (req: Request, res: Response, next: N
       res.status(400).json({ code: 1001, message: 'User already voted on this proposal' });
       return;
     }
+
+    // Φ-BFT 虚时共识投票
+    const voterPhiWeight = 1.0; // TODO: 从 PhiStaking 获取实际 Φ 权重
+    const bftVote = phiBftConsensus.castVote(
+      userId,
+      validated.proposalId,
+      validated.support ? VoteType.FOR : VoteType.AGAINST,
+      `sig_${userId}_${Date.now()}`
+    );
 
     // Get voter's voting weight (based on stake and Φ)
     // TODO: Query PhiStaking contract for actual weight
