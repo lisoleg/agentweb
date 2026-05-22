@@ -6,14 +6,14 @@
 //   ③ 联邦宇宙即未来 (Fediverse as Φ-field Natural Channel)
 
 import { Router, Request, Response } from "express";
-import { PrismaClient, ActorType, ActivityType, TokenType, TokenStatus } from "@prisma/client";
+import { ActorType, ActivityType, TokenType, TokenStatus } from "@prisma/client";
+import prisma from "../utils/prisma";
 import * as crypto from "crypto";
 import { FediverseService } from "../services/fediverseService";
 import { TokenFourService } from "../services/tokenFourService";
 import { PhiCalculator } from "../services/phiCalculator";
 
 const router = Router();
-const prisma = new PrismaClient();
 
 // =============== Actor Endpoints (Fediverse Actor = 化身) ===============
 
@@ -61,7 +61,7 @@ router.get("/actor/:username", async (req: Request, res: Response) => {
     };
     
     res.json(actorObject);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error getting actor:", error);
     res.status(500).json({ error: "Internal server error" });
   }
@@ -129,7 +129,7 @@ router.post("/actor", async (req: Request, res: Response) => {
         outbox: actor.outbox
       }
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error creating/updating actor:", error);
     res.status(500).json({ error: "Internal server error" });
   }
@@ -157,7 +157,7 @@ router.post("/inbox/:username", async (req: Request, res: Response) => {
     }
     
     // Find sender Actor
-    const senderActor = await prisma.actor.findUnique({
+    const senderActor = await prisma.actor.findFirst({
       where: { inbox: activity.actor }
     });
     
@@ -215,14 +215,19 @@ router.post("/inbox/:username", async (req: Request, res: Response) => {
       await FediverseService.processAnnounceActivity(senderActor, targetActor, activity);
     } else if (activity.type === "Consume") {
       // Consume → 算元/词元回收（波核耗散）
-      await TokenFourService.processConsumeActivity(senderActor, targetActor, activity);
+      await TokenFourService.consumeToken(senderActor?.username || '', activity.objectId || '');
     } else if (activity.type === "Reward") {
       // Reward → 智元转移/核销（粒核转移）
-      await TokenFourService.processRewardActivity(senderActor, targetActor, activity);
+      await TokenFourService.rewardToken(
+        senderActor?.username || '',
+        targetActor?.username || '',
+        (activity as any).tokenType || 'CALC' as any,
+        (activity as any).amount || 0
+      );
     }
     
     res.status(200).json({ message: "Activity processed successfully" });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error processing inbox activity:", error);
     res.status(500).json({ error: "Internal server error" });
   }
@@ -267,7 +272,7 @@ router.get("/outbox/:username", async (req: Request, res: Response) => {
         totalPages: Math.ceil(total / limitNum)
       }
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error getting outbox:", error);
     res.status(500).json({ error: "Internal server error" });
   }
@@ -335,7 +340,7 @@ router.post("/follow", async (req: Request, res: Response) => {
         object: following.username
       }
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error following actor:", error);
     
     // Handle duplicate follow
@@ -356,8 +361,8 @@ router.post("/offer", async (req: Request, res: Response) => {
       return res.status(400).json({ error: "actorUsername, targetUsername, and offerData are required" });
     }
     
-    const actor = await prisma.actor.findUnique({ where: { username: actorUsername } });
-    const target = await prisma.actor.findUnique({ where: { username: targetUsername } });
+    const actor = (await prisma.actor.findUnique({ where: { username: actorUsername } }))!;
+    const target = (await prisma.actor.findUnique({ where: { username: targetUsername } }))!;
     
     if (!actor || !target) {
       return res.status(404).json({ error: "Actor not found" });
@@ -404,7 +409,7 @@ router.post("/offer", async (req: Request, res: Response) => {
         phaseGradient
       }
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error creating offer:", error);
     res.status(500).json({ error: "Internal server error" });
   }
@@ -419,7 +424,7 @@ router.post("/accept", async (req: Request, res: Response) => {
       return res.status(400).json({ error: "actorUsername and offerActivityId are required" });
     }
     
-    const actor = await prisma.actor.findUnique({ where: { username: actorUsername } });
+    const actor = (await prisma.actor.findUnique({ where: { username: actorUsername } }))!;
     const offerActivity = await prisma.activity.findUnique({ where: { activityId: offerActivityId } });
     
     if (!actor || !offerActivity) {
@@ -467,7 +472,7 @@ router.post("/accept", async (req: Request, res: Response) => {
       },
       tokenIssuance
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error accepting offer:", error);
     res.status(500).json({ error: "Internal server error" });
   }
@@ -492,7 +497,7 @@ router.post("/consume", async (req: Request, res: Response) => {
       data: {
         activityId: `https://agentweb.example/activities/${crypto.randomBytes(8).toString("hex")}`,
         type: "Consume",
-        actorId: (await prisma.actor.findUnique({ where: { username: actorUsername } })).id,
+        actorId: (await prisma.actor.findUnique({ where: { username: actorUsername } }))!.id,
         objectId: tokenId,
         publishedAt: new Date()
       }
@@ -506,7 +511,7 @@ router.post("/consume", async (req: Request, res: Response) => {
       },
       result
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error consuming token:", error);
     res.status(500).json({ error: error.message || "Internal server error" });
   }
@@ -525,8 +530,8 @@ router.post("/reward", async (req: Request, res: Response) => {
     const result = await TokenFourService.rewardToken(actorUsername, targetUsername, tokenType, amount);
     
     // Create Reward Activity
-    const actor = await prisma.actor.findUnique({ where: { username: actorUsername } });
-    const target = await prisma.actor.findUnique({ where: { username: targetUsername } });
+    const actor = (await prisma.actor.findUnique({ where: { username: actorUsername } }))!;
+    const target = (await prisma.actor.findUnique({ where: { username: targetUsername } }))!;
     
     const rewardActivity = await prisma.activity.create({
       data: {
@@ -547,7 +552,7 @@ router.post("/reward", async (req: Request, res: Response) => {
       },
       result
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error rewarding token:", error);
     res.status(500).json({ error: error.message || "Internal server error" });
   }
@@ -593,7 +598,7 @@ router.get("/avatar/:username", async (req: Request, res: Response) => {
     };
     
     res.json(avatar);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error getting avatar:", error);
     res.status(500).json({ error: "Internal server error" });
   }

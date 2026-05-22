@@ -6,7 +6,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import logger from '../utils/logger';
-import prisma from '@prisma/client';
+import prisma from '../utils/prisma';
 import axios from 'axios';
 
 const router = Router();

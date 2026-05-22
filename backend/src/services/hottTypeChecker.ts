@@ -106,7 +106,7 @@ class HottTypeCheckerClass {
    * 如果 p: A = B, 则 transport(p, a: A): B
    */
   transport<A, B>(identity: Identity<A>, value: A, targetTypeName: string): HoTTValidated<B> | null {
-    if (identity.type === 'REFL' && identity.isValid) {
+    if (identity.type === 'REFL' && identity.proof?.isValid) {
       // 自反路径：直接类型转换
       return this.validate(value as unknown as B, targetTypeName);
     }

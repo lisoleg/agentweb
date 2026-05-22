@@ -5,11 +5,11 @@
 //   ② 7G、AgentWeb 与 FPGA 优先 (Φ-field Carrier)
 //   ③ 联邦宇宙即未来 (Fediverse as Φ-field Natural Channel)
 
-import { PrismaClient, TokenType, TokenStatus, ActivityType } from "@prisma/client";
+import { TokenType, TokenStatus, ActivityType } from "@prisma/client";
+import prisma from "../utils/prisma";
 import * as crypto from "crypto";
 import { PhiCalculator } from "./phiCalculator";
 
-const prisma = new PrismaClient();
 
 /**
  * Issue Token by Transaction (交易即发行)
@@ -67,7 +67,7 @@ export async function issueTokenByTransaction(
       // 7. 更新 TokenIssuance 的 issuedTokenId
       await prisma.tokenIssuance.update({
         where: { id: tokenIssuance.id },
-        data: { issuedTokenId: token.id }
+        data: { issuedToken: { connect: { id: token.id } } }
       });
       
       // 8. 更新 Actor 的钱包余额
@@ -205,7 +205,7 @@ export async function consumeToken(
     });
     
     // 4. 更新 Actor 的钱包余额（波核耗散，能量回归背景场）
-    await updateActorWallet(token.ownerId, token.type, token.amount, "consume");
+    await updateActorWallet(token.ownerId, token.type, token.amount ?? 0, "consume");
     
     // 5. 触发 JIAJIA 式写通知回收（异步）
     await recycleTokenJIAJIA(token.id, `resource_${token.ownerId}_${Date.now()}`);

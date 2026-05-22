@@ -47,13 +47,13 @@ const logger = winston.createLogger({
       filename: path.join(logDir, 'error.log'),
       level: 'error',
       maxsize: parseSize(process.env.LOG_FILE_MAX_SIZE || '10m'),
-      maxFiles: process.env.LOG_FILE_MAX_FILES || '14d',
+      maxFiles: parseInt(process.env.LOG_FILE_MAX_FILES || '14') || 14,
     }),
     // Combined log file
     new winston.transports.File({
       filename: path.join(logDir, 'combined.log'),
       maxsize: parseSize(process.env.LOG_FILE_MAX_SIZE || '10m'),
-      maxFiles: process.env.LOG_FILE_MAX_FILES || '14d',
+      maxFiles: parseInt(process.env.LOG_FILE_MAX_FILES || '14') || 14,
     }),
   ],
 });

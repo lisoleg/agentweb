@@ -4,20 +4,10 @@
  * 支持：节点注册、任务提交、负载均衡、CLB-Φ场映射
  */
 
-import {
-  ServerRequest,
-  ServerResponse,
-  FPGAConfig,
-  PhiComputeRequest,
-  PhiComputeResponse,
-  TaiyiFPGANode,
-  TaiyiFPGAClient,
-} from "./taiyi_bridge_types";
 
+// ── 类型定义 ──────────────────────────────
 
-// ── 类型定义（内联，避免循环依赖）────────────
-
-export interface FPGAConfig {
+export interface TaiyiFPGAConfig {
   vendor: "xilinx" | "altera" | "lattice";
   family: string;           // e.g. "UltraScale+"
   device: string;           // e.g. "xcu250-figd2104-2L-e"
@@ -202,11 +192,11 @@ export class TaiyiFPGAClient {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          i_field: iField,
-          c_field: cField,
-          g_field: gField,
-          calc_budget: options?.calcBudget ?? 1000,
-          return_details: options?.returnDetails ?? true,
+          iField: iField,
+          cField: cField,
+          gField: gField,
+          calcBudget: options?.calcBudget ?? 1000,
+          returnDetails: options?.returnDetails ?? true,
         } satisfies PhiComputeRequest),
         signal: controller.signal,
       });
@@ -218,7 +208,7 @@ export class TaiyiFPGAClient {
         throw new Error(`FPGA 节点返回错误 ${response.status}: ${errText}`);
       }
 
-      const result: PhiComputeResponse = await response.json();
+      const result = (await response.json()) as PhiComputeResponse;
       const elapsed = performance.now() - t0;
 
       console.log(
@@ -287,7 +277,7 @@ export class TaiyiFPGAClient {
         return { success: false, message: err };
       }
 
-      const result = await response.json();
+      const result = (await response.json()) as { message: string };
       console.log(`✅ CLB-Φ 映射配置成功: ${result.message}`);
       return { success: true, message: result.message };
 
@@ -307,7 +297,7 @@ export class TaiyiFPGAClient {
       `${node.endpoint}/fpga/clb-phi/${clbIndex}`
     );
     if (!response.ok) throw new Error(`查询失败: ${await response.text()}`);
-    const data = await response.json();
+    const data = (await response.json()) as { phiValue: number };
     return data.phiValue;
   }
 
@@ -327,7 +317,7 @@ export class TaiyiFPGAClient {
       node.lastPingMs = Math.round(performance.now() - t0);
 
       if (response.ok) {
-        const data = await response.json();
+        const data = (await response.json()) as { status?: string; fpga_ready?: boolean; load?: number; max_phi?: number };
         node.healthy = data.status === "ok" || data.fpga_ready === true;
         if (data.load !== undefined) node.currentLoad = data.load;
         if (data.max_phi !== undefined) node.maxPhiValue = data.max_phi;

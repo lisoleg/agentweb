@@ -34,7 +34,8 @@ import {
   PerformanceMetrics,
   TokenType,
   CLB,
-  CLBFunction
+  CLBFunction,
+  TopologyType
 } from './types';
 
 import { PartialReconfigurator } from './partial-reconfig';
@@ -311,7 +312,7 @@ export class FPGAEmulator {
           numCLBs: 1000,
           numPRRs: this.prrs.size,
           clbTypes: [CLBFunction.LUT, CLBFunction.FF, CLBFunction.MUX],
-          interconnectTopology: 'MESH'
+          interconnectTopology: TopologyType.MESH
         });
       }
 
@@ -538,7 +539,7 @@ export const defaultHardwareSpec: HardwareSpec = {
   numCLBs: 1000,
   numPRRs: 10,
   clbTypes: [CLBFunction.LUT, CLBFunction.FF, CLBFunction.MUX, CLBFunction.CARRY],
-  interconnectTopology: 'TORUS',
+  interconnectTopology: TopologyType.TORUS,
   constraints: {
     maxPower: 100,  // Watts
     maxTemperature: 85  // Celsius

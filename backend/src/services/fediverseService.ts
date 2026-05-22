@@ -5,13 +5,13 @@
 //   ② 7G、AgentWeb 与 FPGA 优先 (Φ-field Carrier)
 //   ③ 联邦宇宙即未来 (Fediverse as Φ-field Natural Channel)
 
-import { PrismaClient, ActorType, ActivityType } from "@prisma/client";
+import { ActorType, ActivityType, TokenType } from "@prisma/client";
+import prisma from "../utils/prisma";
 import * as crypto from "crypto";
 import { generateKeyPairSync } from "crypto";
 import { TokenFourService } from "./tokenFourService";
 import { PhiCalculator } from "./phiCalculator";
 
-const prisma = new PrismaClient();
 
 export interface ActorObject {
   "@context": string;
@@ -54,21 +54,21 @@ export interface ActivityObject {
  * 生成 Actor 的 RSA 密钥对（用于 DID 认证）
  */
 export function generateRSAKeyPair(): { publicKey: string; privateKey: string } {
-  const { publicKey, privateKey } = generateKeyPairSync("rsa", {
+  const { publicKey, privateKey } = generateKeyPairSync("rsa" as any, {
     modulusLength: 2048,
     publicKeyEncoding: {
-      type: "spki-pem",
+      type: "spki",
       format: "pem"
     },
     privateKeyEncoding: {
-      type: "pkcs8-pem",
+      type: "pkcs8",
       format: "pem"
     }
   });
   
   return {
-    publicKey: publicKey.export({ type: "spki-pem", format: "pem" }) as string,
-    privateKey: privateKey.export({ type: "pkcs8-pem", format: "pem" }) as string
+    publicKey: publicKey as unknown as string,
+    privateKey: privateKey as unknown as string
   };
 }
 
@@ -113,9 +113,8 @@ export async function processCreateActivity(
         await TokenFourService.issueTokenByTransaction(
           senderActor,
           targetActor,
-          activity.tokenIssuance.type,
+          activity.tokenIssuance.type as TokenType,
           activity.tokenIssuance.amount,
-          activity.id
         );
       }
     }
@@ -172,7 +171,7 @@ export async function processFollowActivity(
       where: {
         followerId_followingId: {
           followerId: followerActor.id,
-          following: followingActor.id
+          followingId: followingActor.id
         }
       }
     });

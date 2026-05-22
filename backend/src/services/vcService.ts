@@ -5,7 +5,7 @@
 
 import crypto from 'crypto';
 import logger from '../utils/logger';
-import prisma from '@prisma/client';
+import prisma from '../utils/prisma';
 import { resolveDID } from './didService';
 
 export interface CredentialSubject {

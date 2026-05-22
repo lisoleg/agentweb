@@ -7,8 +7,8 @@ import jwt from 'jsonwebtoken';
 import logger from './logger';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production';
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
-const JWT_REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || '30d';
+const JWT_EXPIRES_IN: string = process.env.JWT_EXPIRES_IN || '7d';
+const JWT_REFRESH_EXPIRES_IN: string = process.env.JWT_REFRESH_EXPIRES_IN || '30d';
 
 export interface JwtPayload {
   userId: string;
@@ -27,7 +27,7 @@ export interface JwtPayload {
 export const generateToken = (payload: Omit<JwtPayload, 'iat' | 'exp'>): string => {
   try {
     return jwt.sign(payload, JWT_SECRET, {
-      expiresIn: JWT_EXPIRES_IN,
+      expiresIn: JWT_EXPIRES_IN as any,
     });
   } catch (error) {
     logger.error('JWT generation error', error);
@@ -43,7 +43,7 @@ export const generateToken = (payload: Omit<JwtPayload, 'iat' | 'exp'>): string 
 export const generateRefreshToken = (payload: Omit<JwtPayload, 'iat' | 'exp'>): string => {
   try {
     return jwt.sign(payload, JWT_SECRET, {
-      expiresIn: JWT_REFRESH_EXPIRES_IN,
+      expiresIn: JWT_REFRESH_EXPIRES_IN as any,
     });
   } catch (error) {
     logger.error('Refresh token generation error', error);

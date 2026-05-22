@@ -6,14 +6,14 @@
 //   ③ 联邦宇宙即未来 (Fediverse as Φ-field Natural Channel)
 
 import { Router, Request, Response } from "express";
-import { PrismaClient, TokenType, TokenStatus } from "@prisma/client";
+import { TokenType, TokenStatus } from "@prisma/client";
+import prisma from "../utils/prisma";
 import * as crypto from "crypto";
 import { TokenFourService } from "../services/tokenFourService";
 import { FediverseService } from "../services/fediverseService";
 import { PhiCalculator } from "../services/phiCalculator";
 
 const router = Router();
-const prisma = new PrismaClient();
 
 // =============== Avatar Fusion Endpoints (化身合体) ==============
 

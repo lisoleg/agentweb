@@ -6,7 +6,7 @@
 import bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
 import logger from '../utils/logger';
-import prisma from '@prisma/client';
+import prisma from '../utils/prisma';
 import { generateToken, generateRefreshToken } from '../utils/jwt';
 import { createDID } from './didService';
 

@@ -5,9 +5,24 @@
 
 import { v4 as uuidv4 } from 'uuid';
 import crypto from 'crypto';
-import { Base58 } from '@b43/utils';
+// Simple Base58 encoding (bs58-compatible)
+const BASE58_CHARS = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+const Base58 = {
+  encode(buffer: Buffer): string {
+    let bytes = BigInt('0x' + buffer.toString('hex'));
+    let result = '';
+    while (bytes > 0n) {
+      result = BASE58_CHARS[Number(bytes % 58n)] + result;
+      bytes /= 58n;
+    }
+    for (let i = 0; i < buffer.length && buffer[i] === 0; i++) {
+      result = '1' + result;
+    }
+    return result;
+  }
+};
 import logger from '../utils/logger';
-import prisma from '@prisma/client';
+import prisma from '../utils/prisma';
 
 const DID_METHOD = process.env.DID_METHOD || 'agentweb';
 
@@ -62,8 +77,8 @@ export const generateKeyPair = (): { publicKey: string; privateKey: string; did:
   });
 
   // Convert to multibase (base58btc with multibase prefix)
-  const publicKeyBytes = publicKey.export({ type: 'spki', format: 'der' });
-  const privateKeyBytes = privateKey.export({ type: 'pkcs8', format: 'der' });
+  const publicKeyBytes = Buffer.isBuffer(publicKey) ? publicKey : Buffer.from(publicKey);
+  const privateKeyBytes = Buffer.isBuffer(privateKey) ? privateKey : Buffer.from(privateKey);
 
   // For simplicity, use base58 encoding
   const publicKeyMultibase = `z${Base58.encode(publicKeyBytes)}`;

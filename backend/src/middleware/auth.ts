@@ -6,9 +6,8 @@
 import { Request, Response, NextFunction } from 'express';
 import { verifyToken, extractTokenFromHeader } from '../utils/jwt';
 import logger from '../utils/logger';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../utils/prisma';
 
-const prisma = new PrismaClient();
 
 // Extend Express Request type
 declare global {

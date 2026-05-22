@@ -106,7 +106,7 @@ export class EvolvableHardware {
           individual: i
         }
       };
-      population.push_back(config);
+      population.push(config);
     }
 
     return population;

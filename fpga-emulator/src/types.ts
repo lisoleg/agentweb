@@ -18,7 +18,7 @@ export interface FPGAConfig {
   metadata?: Record<string, any>;
 }
 
-export interface PRR (PartialReconfigurationRegion) {
+export interface PartialReconfigurationRegion {
   id: string;
   name: string;
   startAddress: number;  // Bitstream address range
@@ -28,15 +28,21 @@ export interface PRR (PartialReconfigurationRegion) {
   lastReconfigTime?: number;
 }
 
-export interface CLB (ConfigurableLogicBlock) {
+/** Alias for PartialReconfigurationRegion */
+export type PRR = PartialReconfigurationRegion;
+
+export interface ConfigurableLogicBlock {
   id: string;
   x: number;  // Grid position
   y: number;
-  function: CLBFunction;
+  func: CLBFunction;
   inputs: number[];  // Input signal IDs
   outputs: number[];  // Output signal IDs
   configuration: string;  // LUT (Look-Up Table) configuration
 }
+
+/** Alias for ConfigurableLogicBlock */
+export type CLB = ConfigurableLogicBlock;
 
 export enum CLBFunction {
   LUT = "LUT",  // Look-Up Table

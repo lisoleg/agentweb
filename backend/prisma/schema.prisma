@@ -27,11 +27,11 @@ model User {
   agents      Agent[]  // Agents owned by user
   votes       Vote[]   // Votes cast by user
   proposals   Proposal[] // Proposals created by user
-  contents    Content[]  // Content authored by user
-  likes       Like[]   // Likes by user
-  comments    Comment[] // Comments by user
-  sessions    Session[] // User sessions
-  actor       Actor?   // Fediverse Actor
+  contents    Content[]  @relation("ContentAuthor") // Content authored by user
+  likes       Like[]     @relation("LikeUser")   // Likes by user
+  comments    Comment[]  @relation("CommentAuthor") // Comments by user
+  sessions    Session[]  @relation("SessionUser") // User sessions
+  actor       Actor?     @relation("ActorUser")   // Fediverse Actor
 
   // Status
   isActive    Boolean  @default(true)
@@ -303,9 +303,9 @@ model Activity {
   windingNumber   Int?       // Winding number (缠绕数)
 
   // Reverse relations
-  inboxActivities Inbox[]
-  outboxActivities Outbox[]
-  genesisTokens   Token[]      // Tokens whose genesis was this activity
+  inboxActivities Inbox[]     @relation("InboxActivity")
+  outboxActivities Outbox[]   @relation("OutboxActivity")
+  genesisTokens   Token[]     // Tokens whose genesis was this activity
 
   publishedAt    DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
@@ -369,7 +369,7 @@ model TokenIssuance {
   issuedAt         DateTime     @default(now())
 
   // The issued token
-  issuedToken      Token?
+  issuedToken      Token?      @relation("TokenIssuanceRef")
 
   @@map("token_issuances")
 }
@@ -412,6 +412,8 @@ model Token {
   
   // Relations
   writeNotices    WriteNotice[] // JIAJIA write-notices
+  tokenIssuance   TokenIssuance? @relation("TokenIssuanceRef", fields: [tokenIssuanceId], references: [id])
+  tokenIssuanceId String?         @unique
   
   @@index([ownerId, status])
   @@index([type, status])

@@ -6,7 +6,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import logger from '../utils/logger';
-import prisma from '@prisma/client';
+import prisma from '../utils/prisma';
 import { authMiddleware, optionalAuthMiddleware } from '../middleware/auth';
 
 const router = Router();
@@ -101,8 +101,8 @@ router.post('/publish', authMiddleware, async (req: Request, res: Response, next
         authorId: userId,
         title: validated.title,
         body: validated.body,
-        contentHash: validated.contentHash,
-        bsvTxId: validated.bsvTxId,
+        contentHash: validated.contentHash || '',
+        bsvTxId: validated.bsvTxId || null,
         phiValue: validated.phiValue || 0,
         metadata: validated.metadata || {},
       },

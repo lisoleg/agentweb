@@ -5,10 +5,9 @@
 //   ② 7G、AgentWeb 与 FPGA 优先 (Φ-field Carrier)
 //   ③ 联邦宇宙即未来 (Fediverse as Φ-field Natural Channel)
 
-import { PrismaClient } from "@prisma/client";
+import prisma from "../utils/prisma";
 import * as math from "mathjs";
 
-const prisma = new PrismaClient();
 
 /**
  * Calculate Phi (Φ) Value
@@ -206,7 +205,7 @@ export async function calculateIGCTRResonance(
     const geoContribution = await calculateGeometryFieldContribution(actor);
     
     // 4. 计算意识场贡献（Consciousness Field - C 场）
-    const conscContribution = calculateConsciousnessFieldContribution(actor);
+    const conscContribution = await calculateConsciousnessFieldContribution(actor);
     
     // 5. 三元共振积分（简化公式）
     // Resonance = α*Info + β*Geo + γ*Consc + δ*(Info*Geo*Consc)
