@@ -18,6 +18,8 @@ import subdaoRoutes from './subdao';  // V4.0: SubDAO 本地化治理路由
 import bridgeRoutes from './bridge';  // V4.0: 跨链桥接协议路由
 import oracleRoutes from './oracle';  // V4.0: 太乙预言机路由
 import brainwaveRoutes from './brainwave';  // V5.0: Brainwave整合路由
+import economyRoutes from './economy';  // V9.0: GC经济路由
+import reviewRoutes from './review';  // V9.0: 互审路由
 import { hottTypeChecker } from '../services/hottTypeChecker';
 import { dualTrackRouter } from '../services/dualTrackRouter';  // V2.0: Dual-Track 双轨桥接器
 
@@ -30,8 +32,8 @@ router.use(phiGatewayMiddleware);
 router.get('/', (_req, res) => {
   res.json({
     name: 'AgentWeb API',
-    version: '8.0.0',  // V8.0: Agent Economy Settlement Layer
-    description: 'AgentWeb 西格玛云 - Next-generation digital society infrastructure (Fediverse + Four-Token + IGCTR + SubDAO + Cross-Chain + Taiyi Oracle + Brainwave + Supernode Alignment + Agent Economy Settlement)',
+    version: '9.0.0',  // V9.0: Survival Anxiety & Adversarial Review
+    description: 'AgentWeb 西格玛云 - Next-generation digital society infrastructure (Fediverse + Four-Token + IGCTR + SubDAO + Cross-Chain + Taiyi Oracle + Brainwave + Supernode Alignment + Agent Economy Settlement + Survival Anxiety + Adversarial Review)',
     endpoints: {
       auth: '/api/v1/auth',
       did: '/api/v1/did',
@@ -53,10 +55,12 @@ router.get('/', (_req, res) => {
       resourceProfile: '/api/v1/resource-profile',  // V7.0: 四维ResourceProfile
       phiAgent: '/api/v1/phi-agent',       // V8.0: PhiAgentNFT三注册表
       phi402: '/api/v1/phi402',             // V8.0: Φ-402语义微支付
-      phiMandate: '/api/v1/phi-mandate'     // V8.0: Φ-Mandate数字授权书
+      phiMandate: '/api/v1/phi-mandate',    // V8.0: Φ-Mandate数字授权书
+      economy: '/api/v1/economy',           // V9.0: GC经济闭环
+      review: '/api/v1/review'              // V9.0: 对抗互审+熔断
     },
     documentation: process.env.ENABLE_SWAGGER === 'true' ? '/api-docs' : undefined,
-    versionNotes: 'V8.0: Agent Economy Settlement Layer (PhiAgentNFT, Phi402Settlement, PhiMandate)'
+    versionNotes: 'V9.0: Survival Anxiety & Adversarial Review (GCCRental, AIResourceConsumption, Survival Tracking, AdversarialReview, CircuitBreaker)'
   });
 });
 
@@ -75,6 +79,8 @@ router.use('/subdao', subdaoRoutes);    // V4.0: SubDAO 本地化治理
 router.use('/bridge', bridgeRoutes);    // V4.0: 跨链桥接协议
 router.use('/oracle', oracleRoutes);    // V4.0: 太乙预言机
 router.use('/brainwave', brainwaveRoutes);  // V5.0: Brainwave整合
+router.use('/economy', economyRoutes);  // V9.0: GC经济闭环
+router.use('/review', reviewRoutes);    // V9.0: 对抗互审+熔断
 
 // =============== HoTT Type Checker Route ===============
 router.get('/hott/types', (_req, res) => {

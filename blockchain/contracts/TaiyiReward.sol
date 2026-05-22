@@ -61,6 +61,90 @@ contract TaiyiReward is Ownable, ReentrancyGuard {
         string metadataURI;    // IPFS元数据URI
     }
     
+    // ── V9.0 生存焦虑机制 ──────────────────
+
+    /// @notice 生存状态枚举
+    enum SurvivalStatus {
+        THRIVING,     // 繁荣：有稳定收入
+        WARNING,      // 警告：连续3周期无收入
+        ENDANGERED,   // 濒危：连续6周期无收入
+        EXPELLED      // 驱逐：被踢出集群
+    }
+
+    /// @notice 收入记录
+    struct IncomeRecord {
+        uint256 lastIncomeEpoch;      // 最近有收入的周期
+        uint256 consecutiveNoIncome;  // 连续无收入周期数
+        uint256 totalIncomeEpochs;    // 总有收入周期数
+        uint256 totalIncome;          // 总收入
+        uint256 totalConsumption;     // 总消费
+        SurvivalStatus status;        // 当前生存状态
+        uint256 phiScore;             // Φ值（高Φ→更长宽限期）
+    }
+
+    /// @notice 节点地址 → 生存状态
+    mapping(address => IncomeRecord) public survivalStates;
+
+    /// @notice 当前周期号
+    uint256 public currentEpoch;
+
+    /// @notice 一个周期的秒数（默认1天 = 86400）
+    uint256 public epochDuration;
+
+    /// @notice WARNING阈值：连续N周期无收入
+    uint256 public warningThreshold;
+
+    /// @notice EXPELLED阈值：连续N周期无收入
+    uint256 public expelledThreshold;
+
+    /// @notice Φ值宽限期系数（高Φ可增加宽限期，单位: 周期/1000Φ）
+    uint256 public phiGraceMultiplier;
+
+    // ── V9.0 生存焦虑事件 ──────────────────
+
+    /// @notice Agent收到收入
+    event IncomeRecorded(
+        address indexed node,
+        uint256 amount,
+        uint256 epoch,
+        SurvivalStatus previousStatus
+    );
+
+    /// @notice Agent进入WARNING状态
+    event SurvivalWarning(
+        address indexed node,
+        uint256 consecutiveNoIncome,
+        uint256 effectiveThreshold
+    );
+
+    /// @notice Agent进入ENDANGERED状态
+    event SurvivalEndangered(
+        address indexed node,
+        uint256 consecutiveNoIncome,
+        uint256 effectiveThreshold
+    );
+
+    /// @notice Agent被驱逐
+    event AgentExpelled(
+        address indexed node,
+        uint256 consecutiveNoIncome,
+        uint256 timestamp
+    );
+
+    /// @notice 消费记录（用于双追踪）
+    event ConsumptionRecorded(
+        address indexed node,
+        uint256 amount,
+        uint256 epoch
+    );
+
+    /// @notice 生存状态恢复
+    event SurvivalRecovered(
+        address indexed node,
+        SurvivalStatus oldStatus,
+        SurvivalStatus newStatus
+    );
+
     // ── 存储 ─────────────────────────────────
     
     /// @notice 所有贡献记录
@@ -135,6 +219,13 @@ contract TaiyiReward is Ownable, ReentrancyGuard {
         validator = _validator;
         admins[msg.sender] = true;
         lastSettlementDay = block.timestamp / 1 days;
+
+        // V9.0 生存焦虑初始化
+        epochDuration = 86400;          // 1天
+        currentEpoch = block.timestamp / epochDuration;
+        warningThreshold = 3;           // 3周期无收入→WARNING
+        expelledThreshold = 6;          // 6周期无收入→EXPELLED
+        phiGraceMultiplier = 1;         // 每1000Φ增加1周期宽限
     }
     
     // ── 外部函数 ────────────────────────────
@@ -231,7 +322,10 @@ contract TaiyiReward is Ownable, ReentrancyGuard {
         
         // 标记请求已处理
         requestProcessed[requestId] = true;
-        
+
+        // ── V9.0 生存焦虑：记录收入 ──
+        _recordIncome(node, reward);
+
         emit ContributionRecorded(
             contributionId, node, phiValue, computeTime, reward, requestId
         );
@@ -431,6 +525,140 @@ contract TaiyiReward is Ownable, ReentrancyGuard {
         emit RewardClaimed(to, amount, block.timestamp);
     }
     
+    // ── V9.0 生存焦虑函数 ──────────────────
+
+    /// @notice 记录消费（用于双追踪收入/消费）
+    /// @param node Agent节点地址
+    /// @param amount 消费金额
+    function recordConsumption(address node, uint256 amount) external onlyValidator {
+        require(node != address(0), "TaiyiReward: zero node address");
+        _advanceEpoch();
+        IncomeRecord storage record = survivalStates[node];
+        record.totalConsumption += amount;
+        emit ConsumptionRecorded(node, amount, currentEpoch);
+    }
+
+    /// @notice 检查并更新生存状态（keeper调用）
+    /// @param node Agent节点地址
+    function checkSurvivalStatus(address node) external returns (SurvivalStatus) {
+        _advanceEpoch();
+        IncomeRecord storage record = survivalStates[node];
+        uint256 epochsSinceIncome = currentEpoch > record.lastIncomeEpoch
+            ? currentEpoch - record.lastIncomeEpoch
+            : 0;
+
+        if (record.lastIncomeEpoch == 0 && record.totalIncome == 0) {
+            // 从未有过收入的新节点，给一个初始宽限期
+            record.consecutiveNoIncome = 0;
+            record.status = SurvivalStatus.WARNING;
+            return record.status;
+        }
+
+        record.consecutiveNoIncome = epochsSinceIncome;
+
+        // Φ差异化宽限期
+        uint256 effectiveWarning = warningThreshold + (record.phiScore * phiGraceMultiplier) / 1000;
+        uint256 effectiveExpelled = expelledThreshold + (record.phiScore * phiGraceMultiplier) / 1000;
+
+        SurvivalStatus oldStatus = record.status;
+
+        if (epochsSinceIncome >= effectiveExpelled) {
+            record.status = SurvivalStatus.EXPELLED;
+            if (oldStatus != SurvivalStatus.EXPELLED) {
+                emit AgentExpelled(node, epochsSinceIncome, block.timestamp);
+            }
+        } else if (epochsSinceIncome >= effectiveWarning) {
+            record.status = SurvivalStatus.ENDANGERED;
+            if (oldStatus != SurvivalStatus.ENDANGERED) {
+                emit SurvivalEndangered(node, epochsSinceIncome, effectiveExpelled);
+            }
+        } else if (epochsSinceIncome >= (effectiveWarning / 2)) {
+            record.status = SurvivalStatus.WARNING;
+            if (oldStatus != SurvivalStatus.WARNING && oldStatus != SurvivalStatus.ENDANGERED) {
+                emit SurvivalWarning(node, epochsSinceIncome, effectiveWarning);
+            }
+        } else {
+            if (oldStatus != SurvivalStatus.THRIVING) {
+                record.status = SurvivalStatus.THRIVING;
+                emit SurvivalRecovered(node, oldStatus, SurvivalStatus.THRIVING);
+            }
+        }
+
+        return record.status;
+    }
+
+    /// @notice 批量检查生存状态
+    function batchCheckSurvival(address[] calldata nodes) external {
+        for (uint256 i = 0; i < nodes.length; i++) {
+            this.checkSurvivalStatus(nodes[i]);
+        }
+    }
+
+    /// @notice 获取生存状态
+    function getSurvivalState(address node) external view returns (
+        SurvivalStatus status,
+        uint256 consecutiveNoIncome,
+        uint256 totalIncome,
+        uint256 totalConsumption,
+        uint256 lastIncomeEpoch,
+        uint256 effectiveWarningThreshold,
+        uint256 effectiveExpelledThreshold
+    ) {
+        IncomeRecord memory record = survivalStates[node];
+        uint256 phiGrace = (record.phiScore * phiGraceMultiplier) / 1000;
+        return (
+            record.status,
+            record.consecutiveNoIncome,
+            record.totalIncome,
+            record.totalConsumption,
+            record.lastIncomeEpoch,
+            warningThreshold + phiGrace,
+            expelledThreshold + phiGrace
+        );
+    }
+
+    /// @notice 设置生存焦虑参数
+    function setSurvivalParams(
+        uint256 _warningThreshold,
+        uint256 _expelledThreshold,
+        uint256 _phiGraceMultiplier,
+        uint256 _epochDuration
+    ) external onlyAdmin {
+        require(_expelledThreshold > _warningThreshold, "TaiyiReward: invalid thresholds");
+        warningThreshold = _warningThreshold;
+        expelledThreshold = _expelledThreshold;
+        phiGraceMultiplier = _phiGraceMultiplier;
+        epochDuration = _epochDuration;
+    }
+
+    /// @dev 记录收入并更新生存状态
+    function _recordIncome(address node, uint256 amount) internal {
+        _advanceEpoch();
+        IncomeRecord storage record = survivalStates[node];
+        SurvivalStatus oldStatus = record.status;
+
+        record.lastIncomeEpoch = currentEpoch;
+        record.consecutiveNoIncome = 0;
+        record.totalIncomeEpochs++;
+        record.totalIncome += amount;
+
+        // 恢复状态
+        if (oldStatus != SurvivalStatus.THRIVING) {
+            record.status = SurvivalStatus.THRIVING;
+            emit SurvivalRecovered(node, oldStatus, SurvivalStatus.THRIVING);
+        }
+
+        emit IncomeRecorded(node, amount, currentEpoch, oldStatus);
+    }
+
+    /// @dev 推进周期
+    function _advanceEpoch() internal {
+        uint256 newEpoch = block.timestamp / epochDuration;
+        if (newEpoch > currentEpoch) {
+            currentEpoch = newEpoch;
+        }
+    }
+
     /// @dev 地址转string
     function _addressToString(address _addr) internal pure returns (string memory) {
         bytes32 value = bytes32(uint256(uint160(_addr)));

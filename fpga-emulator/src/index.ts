@@ -63,6 +63,45 @@ export type {
   PhiBudgetCalculation,
 } from './types';
 
+// V9.0 Survival Anxiety & Economy (TS type exports only - contracts are Solidity)
+export type {
+  // P0-1: GCC Rental
+  RentalPlanType,
+  BillingMode,
+  RentalStatus,
+  RentalPlan,
+  AgentRental,
+  GpuNode,
+  // P0-2: AI Resource Consumption
+  ResourceType,
+  SubscriptionTier,
+  ResourcePrice,
+  Consumption,
+  ResourceSubscription,
+  // P0-3: Survival Anxiety
+  SurvivalStatus,
+  IncomeRecord,
+  SurvivalState,
+  // P1-1: Adversarial Review
+  ReviewRole,
+  ReviewDecision,
+  SessionStatus,
+  Review,
+  ReviewSession,
+  Arbitration,
+  // P1-2: Circuit Breaker
+  CircuitState,
+  ErrorSeverity,
+  ErrorRecord,
+  CircuitBreakerState,
+  RecoveryAttempt,
+  // Negative Case Library
+  NegativeCase,
+  // Phi Dynamic Pricing
+  EconomyPricingTier,
+  PhiPriceQuote,
+} from './types';
+
 // Export default configurations
 export {
   defaultHardwareSpec,

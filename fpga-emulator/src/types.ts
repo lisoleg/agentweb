@@ -552,3 +552,213 @@ export interface PhiBudgetCalculation {
   effectiveBudget: number;
   multiplier: number;
 }
+
+// =============== V9.0 Survival Anxiety & Economy Types ===============
+
+// --- V9.0 P0-1: GCC Rental ---
+export type RentalPlanType = 'BASIC' | 'STANDARD' | 'PREMIUM';
+export type BillingMode = 'TIME_BASED' | 'COMPUTE_BASED';
+export type RentalStatus = 'INACTIVE' | 'ACTIVE' | 'DOWNGRADED' | 'DISCONNECTED';
+
+export interface RentalPlan {
+  planType: RentalPlanType;
+  timeRate: string;           // GC per second (wei)
+  computeRate: string;        // GC per compute unit (wei)
+  gpuPriority: number;        // GPU priority (1-10)
+  maxComputeUnits: number;    // Max compute units/sec
+  depositRequired: string;    // Required deposit (GC wei)
+  description: string;
+}
+
+export interface AgentRental {
+  agentId: number;
+  agentWallet: string;
+  planType: RentalPlanType;
+  billingMode: BillingMode;
+  status: RentalStatus;
+  startTime: number;
+  lastSettleTime: number;
+  gcDeposited: string;
+  gcConsumed: string;
+  computeUnitsUsed: number;
+  downgradeCount: number;
+}
+
+export interface GpuNode {
+  nodeOperator: string;
+  nodeId: number;
+  gpuPriority: number;
+  totalCapacity: number;
+  usedCapacity: number;
+  isActive: boolean;
+  region: string;
+}
+
+// --- V9.0 P0-2: AI Resource Consumption ---
+export type ResourceType = 'ENERGY' | 'STORAGE' | 'BANDWIDTH';
+export type SubscriptionTier = 'FREE' | 'BASIC' | 'PRO' | 'ENTERPRISE';
+
+export interface ResourcePrice {
+  resourceType: ResourceType;
+  basePricePerUnit: string;
+  phiDiscountBps: number;
+  phiPremiumBps: number;
+  phiFreeThreshold: number;
+  phiStandardThreshold: number;
+  unitDecimals: number;
+  unitName: string;
+}
+
+export interface Consumption {
+  agentId: number;
+  resourceType: ResourceType;
+  units: number;
+  gcCost: string;
+  phiScore: number;
+  timestamp: number;
+  settled: boolean;
+}
+
+export interface ResourceSubscription {
+  agentId: number;
+  tier: SubscriptionTier;
+  resourceType: ResourceType;
+  unitsIncluded: number;
+  gcCostPerPeriod: string;
+  periodSeconds: number;
+  startTimestamp: number;
+  nextRenewal: number;
+  unitsUsed: number;
+  autoRenew: boolean;
+  active: boolean;
+}
+
+// --- V9.0 P0-3: Survival Anxiety ---
+export type SurvivalStatus = 'THRIVING' | 'WARNING' | 'ENDANGERED' | 'EXPELLED';
+
+export interface IncomeRecord {
+  lastIncomeEpoch: number;
+  consecutiveNoIncome: number;
+  totalIncomeEpochs: number;
+  totalIncome: string;
+  totalConsumption: string;
+  status: SurvivalStatus;
+  phiScore: number;
+}
+
+export interface SurvivalState {
+  status: SurvivalStatus;
+  consecutiveNoIncome: number;
+  totalIncome: string;
+  totalConsumption: string;
+  lastIncomeEpoch: number;
+  effectiveWarningThreshold: number;
+  effectiveExpelledThreshold: number;
+}
+
+// --- V9.0 P1-1: Adversarial Review ---
+export type ReviewRole = 'ARCHITECT' | 'SECURITY_AUDITOR' | 'UX_OFFICER';
+export type ReviewDecision = 'PENDING' | 'APPROVED' | 'REJECTED' | 'CONDITIONAL' | 'ARBITRATION';
+export type SessionStatus = 'SUBMITTED' | 'REVIEWING' | 'VOTING' | 'RESOLVED' | 'ARBITRATION' | 'CLOSED';
+
+export interface Review {
+  reviewer: string;
+  role: ReviewRole;
+  score: number;          // 0-100
+  comment: string;
+  tags: string[];
+  decision: ReviewDecision;
+  timestamp: number;
+  submitted: boolean;
+}
+
+export interface ReviewSession {
+  sessionId: number;
+  targetAgentId: number;
+  submitter: string;
+  subject: string;
+  description: string;
+  contentHash: string;
+  status: SessionStatus;
+  finalDecision: ReviewDecision;
+  submittedAt: number;
+  resolvedAt: number;
+  reviewDeadline: number;
+  arbitrationId: number;
+  reviews: Partial<Record<ReviewRole, Review>>;
+}
+
+export interface Arbitration {
+  arbitrationId: number;
+  sessionId: number;
+  arbitrator: string;
+  decision: ReviewDecision;
+  reasoning: string;
+  timestamp: number;
+  resolved: boolean;
+}
+
+// --- V9.0 P1-2: Circuit Breaker ---
+export type CircuitState = 'OPERATIONAL' | 'WARNED' | 'SUSPENDED' | 'CIRCUIT_BROKEN';
+export type ErrorSeverity = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+
+export interface ErrorRecord {
+  errorId: number;
+  agentId: number;
+  errorType: string;
+  errorMessage: string;
+  severity: ErrorSeverity;
+  timestamp: number;
+  reporter: string;
+  sessionId: number;
+}
+
+export interface CircuitBreakerState {
+  agentId: number;
+  state: CircuitState;
+  totalErrors: number;
+  warningCount: number;
+  suspensionCount: number;
+  circuitBreakCount: number;
+  lastErrorTimestamp: number;
+  recoveryAttempts: number;
+  successfulRecoveries: number;
+}
+
+export interface RecoveryAttempt {
+  attemptId: number;
+  agentId: number;
+  reviewer: string;
+  approved: boolean;
+  evidence: string;
+  timestamp: number;
+  previousState: CircuitState;
+  newState: CircuitState;
+}
+
+// --- V9.0 Negative Case Library ---
+export interface NegativeCase {
+  caseId: number;
+  agentId: number;
+  errorType: string;
+  description: string;
+  severity: ErrorSeverity;
+  reviewSessionId: number;
+  circuitState: CircuitState;
+  timestamp: number;
+  resolved: boolean;
+}
+
+// --- V9.0 Phi Dynamic Pricing ---
+export type EconomyPricingTier = 'FREE' | 'DISCOUNT' | 'STANDARD' | 'PREMIUM';
+
+export interface PhiPriceQuote {
+  resourceType: ResourceType;
+  units: number;
+  baseCost: string;
+  phiDiscount: string;
+  phiPremium: string;
+  finalCost: string;
+  pricingTier: EconomyPricingTier;
+}
+
