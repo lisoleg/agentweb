@@ -19,7 +19,7 @@ function Governance() {
 
   useEffect(() => {
     loadProposals();
-  }, [));
+  }, []);
 
   const loadProposals = async () => {
     try {
