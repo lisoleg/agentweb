@@ -9,6 +9,7 @@ import logger from '../utils/logger';
 import prisma from '../utils/prisma';
 import { authMiddleware } from '../middleware/auth';
 import { phiBftConsensus, VoteType } from '../services/phiBftConsensus';
+import { blockchainService } from '../services/blockchainService';
 
 const router = Router();
 
@@ -133,7 +134,8 @@ router.post('/vote', authMiddleware, async (req: Request, res: Response, next: N
     }
 
     // Φ-BFT 虚时共识投票
-    const voterPhiWeight = 1.0; // TODO: 从 PhiStaking 获取实际 Φ 权重
+    // 从 PhiStaking 合约获取实际投票权（模拟模式下返回默认值）
+    const voterPhiWeight = await blockchainService.getVotingPower(userId);
     const bftVote = phiBftConsensus.castVote(
       userId,
       validated.proposalId,
@@ -142,8 +144,7 @@ router.post('/vote', authMiddleware, async (req: Request, res: Response, next: N
     );
 
     // Get voter's voting weight (based on stake and Φ)
-    // TODO: Query PhiStaking contract for actual weight
-    const votingWeight = 1.0;
+    const votingWeight = voterPhiWeight;
 
     // Create vote
     await prisma.vote.create({

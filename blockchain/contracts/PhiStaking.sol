@@ -2,8 +2,8 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/Pausable.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -101,7 +101,7 @@ contract PhiStaking is Ownable, Pausable, ReentrancyGuard {
             s_stakes[msg.sender].amount + amount <= maxStakeAmount,
             "Exceeds maximum"
         );
-        require(phiValue <= MAX_PHI_VALUE, "Invalid Φ value");
+        require(phiValue <= MAX_PHI_VALUE, "Invalid Phi value");
 
         // Update rewards
         _updateReward(msg.sender);
@@ -188,7 +188,7 @@ contract PhiStaking is Ownable, Pausable, ReentrancyGuard {
      * @param newPhiPhase New Φ phase (×1e6, -3141593 to 3141593)
      */
     function updatePhiPhase(int256 newPhiPhase) external returns (bool) {
-        require(newPhiPhase >= -3141593 && newPhiPhase <= 3141593, "Invalid Φ phase");
+        require(newPhiPhase >= -3141593 && newPhiPhase <= 3141593, "Invalid Phi phase");
 
         _updateReward(msg.sender);
 
@@ -207,7 +207,7 @@ contract PhiStaking is Ownable, Pausable, ReentrancyGuard {
      * @param newPhiValue New Φ value (0-10000)
      */
     function updatePhiValue(uint256 newPhiValue) external returns (bool) {
-        require(newPhiValue <= MAX_PHI_VALUE, "Invalid Φ value");
+        require(newPhiValue <= MAX_PHI_VALUE, "Invalid Phi value");
 
         _updateReward(msg.sender);
 
@@ -276,8 +276,8 @@ contract PhiStaking is Ownable, Pausable, ReentrancyGuard {
      * @return amount Staked amount
      * @return phiValue Φ value
      * @return pendingReward Pending reward
-     * @return lastUpdateTime Last update timestamp
-     * @return lockEndTime Lock end time
+     * @return _lastUpdateTime Last update timestamp
+     * @return _lockEndTime Lock end time
      */
     function getStakeInfo(address user)
         external
@@ -286,8 +286,8 @@ contract PhiStaking is Ownable, Pausable, ReentrancyGuard {
             uint256 amount,
             uint256 phiValue,
             uint256 pendingReward,
-            uint256 lastUpdateTime,
-            uint256 lockEndTime
+            uint256 _lastUpdateTime,
+            uint256 _lockEndTime
         )
     {
         StakeInfo memory stakeInfo = s_stakes[user];

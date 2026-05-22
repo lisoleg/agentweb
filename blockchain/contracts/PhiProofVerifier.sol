@@ -2,7 +2,7 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
+import "@openzeppelin/contracts/utils/Pausable.sol";
 
 /**
  * @title PhiProofVerifier
@@ -14,6 +14,8 @@ import "@openzeppelin/contracts/security/Pausable.sol";
  * - Integrates with PhiStaking for Φ-based rewards
  */
 contract PhiProofVerifier is Ownable, Pausable {
+
+    constructor() Ownable(msg.sender) {}
 
     struct ProofRecord {
         bytes32 proofHash;       // zk-SNARK proof hash

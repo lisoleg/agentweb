@@ -7,7 +7,12 @@ import { HardhatUserConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
 import "@typechain/hardhat";
 import dotenv from "dotenv";
+import { fileURLToPath } from "url";
 import path from "path";
+
+// ESM-compatible __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Load environment variables
 dotenv.config({ path: path.join(__dirname, "..", ".env") });
@@ -64,17 +69,6 @@ const config: HardhatUserConfig = {
     enabled: process.env.REPORT_GAS ? true : false,
     currency: "USD",
     outputFile: process.env.GAS_REPORT_FILENAME,
-  },
-
-  // Solidity coverage
-  solidity: {
-    version: "0.8.20",
-    settings: {
-      optimizer: {
-        enabled: true,
-        runs: 200,
-      },
-    },
   },
 };
 
