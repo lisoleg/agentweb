@@ -12,10 +12,14 @@ import phiRoutes from './phi';
 import agentRoutes from './agent';
 import newsRoutes from './news';
 import governanceRoutes from './governance';
-import fediverseRoutes from './fediverse';  // 新增：Fediverse (ActivityPub) 路由
-import avatarRoutes from './avatar';  // 新增：Avatar Fusion (化身合体) 路由
+import fediverseRoutes from './fediverse';  // V2.0: Fediverse (ActivityPub) 路由
+import avatarRoutes from './avatar';  // V2.0: Avatar Fusion (化身合体) 路由
+import subdaoRoutes from './subdao';  // V4.0: SubDAO 本地化治理路由
+import bridgeRoutes from './bridge';  // V4.0: 跨链桥接协议路由
+import oracleRoutes from './oracle';  // V4.0: 太乙预言机路由
+import brainwaveRoutes from './brainwave';  // V5.0: Brainwave整合路由
 import { hottTypeChecker } from '../services/hottTypeChecker';
-import { dualTrackRouter } from '../services/dualTrackRouter';  // 新增：Dual-Track 双轨桥接器
+import { dualTrackRouter } from '../services/dualTrackRouter';  // V2.0: Dual-Track 双轨桥接器
 
 const router = Router();
 
@@ -26,8 +30,8 @@ router.use(phiGatewayMiddleware);
 router.get('/', (_req, res) => {
   res.json({
     name: 'AgentWeb API',
-    version: '2.0.0',  // 升级到 V2.0
-    description: 'AgentWeb 西格玛云 - Next-generation digital society infrastructure (Fediverse + Four-Token + IGCTR)',
+    version: '5.0.0',  // V5.0: Brainwave Integration
+    description: 'AgentWeb 西格玛云 - Next-generation digital society infrastructure (Fediverse + Four-Token + IGCTR + SubDAO + Cross-Chain + Taiyi Oracle + Brainwave)',
     endpoints: {
       auth: '/api/v1/auth',
       did: '/api/v1/did',
@@ -36,13 +40,17 @@ router.get('/', (_req, res) => {
       agent: '/api/v1/agent',
       news: '/api/v1/news',
       governance: '/api/v1/governance',
-      fediverse: '/api/v1/fediverse',  // 新增：Fediverse (ActivityPub)
-      avatar: '/api/v1/avatar',  // 新增：Avatar Fusion (化身合体)
-      dualtrack: '/api/v1/dualtrack',  // 新增：Dual-Track 双轨桥接器
+      fediverse: '/api/v1/fediverse',
+      avatar: '/api/v1/avatar',
+      dualtrack: '/api/v1/dualtrack',
+      subdao: '/api/v1/subdao',    // V4.0: SubDAO 本地化治理
+      bridge: '/api/v1/bridge',    // V4.0: 跨链桥接协议
+      oracle: '/api/v1/oracle',    // V4.0: 太乙预言机
+      brainwave: '/api/v1/brainwave',  // V5.0: Brainwave整合
       hott: '/api/v1/hott'
     },
     documentation: process.env.ENABLE_SWAGGER === 'true' ? '/api-docs' : undefined,
-    versionNotes: 'V2.0: Added Fediverse (ActivityPub), Four-Token System, IGCTR unified field theory, Avatar Fusion'
+    versionNotes: 'V5.0: Brainwave Integration (SRAM Pool, Phi Quantizer, Model Partitioner, NPU Soft Core, Catapult Pool, Precision Validator)'
   });
 });
 
@@ -54,9 +62,13 @@ router.use('/phi', phiRoutes);
 router.use('/agent', agentRoutes);
 router.use('/news', newsRoutes);
 router.use('/governance', governanceRoutes);
-router.use('/fediverse', fediverseRoutes);  // 新增：Fediverse (ActivityPub)
-router.use('/avatar', avatarRoutes);  // 新增：Avatar Fusion (化身合体)
-router.use('/dualtrack', dualTrackRouter.createRouter());  // 新增：Dual-Track 双轨桥接器
+router.use('/fediverse', fediverseRoutes);
+router.use('/avatar', avatarRoutes);
+router.use('/dualtrack', dualTrackRouter.createRouter());
+router.use('/subdao', subdaoRoutes);    // V4.0: SubDAO 本地化治理
+router.use('/bridge', bridgeRoutes);    // V4.0: 跨链桥接协议
+router.use('/oracle', oracleRoutes);    // V4.0: 太乙预言机
+router.use('/brainwave', brainwaveRoutes);  // V5.0: Brainwave整合
 
 // =============== HoTT Type Checker Route ===============
 router.get('/hott/types', (_req, res) => {

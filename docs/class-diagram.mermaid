@@ -1,0 +1,249 @@
+classDiagram
+    direction TB
+
+    %% ═══ P0-1: SRAM 池化 ↔ Φ 场全息存储 ═══
+    class SRAMPoolConfig {
+        +number totalSizeMB
+        +number bankCount
+        +number bankSizeKB
+        +SRAMBank[] banks
+    }
+
+    class SRAMBank {
+        +string bankId
+        +number offset
+        +number sizeKB
+        +SRAMBankStatus status
+        +string[] mappedPhiExcitationIds
+    }
+
+    class SRAMPoolAdapter {
+        -SRAMPoolConfig config
+        -PhiFieldMapper phiMapper
+        -Map~string, SRAMBank~ allocationMap
+        +initialize(config: SRAMPoolConfig): void
+        +allocateForExcitation(excitation: PhiExcitation): SRAMBank
+        +releaseBank(bankId: string): void
+        +syncToPhiField(): PhiFieldState
+        +syncFromPhiField(state: PhiFieldState): void
+        +getHolographicReplica(bankId: string): Buffer
+        +reportUtilization(): SRAMUtilizationReport
+    }
+
+    SRAMPoolAdapter --> SRAMPoolConfig : uses
+    SRAMPoolAdapter --> PhiFieldMapper : delegates
+    SRAMBank --> SRAMPoolConfig : contained
+
+    %% ═══ P0-2: ms-fp8/9 量化引擎 ═══
+    class MSFPFormat {
+        +FPVariant variant
+        +number signBits
+        +number exponentBits
+        +number mantissaBits
+        +number bias
+    }
+
+    class EMLPhiValue {
+        +number magnitude
+        +number phaseAngle
+        +toComplex(): {re: number, im: number}
+        +fromComplex(re: number, im: number): EMLPhiValue
+    }
+
+    class QuantizationEngine {
+        -Map~FPVariant, MSFPFormat~ formatRegistry
+        -decimal.js.Decimal precision
+        +registerFormat(format: MSFPFormat): void
+        +encodeEMLToMSFP(phi: EMLPhiValue, variant: FPVariant): BigInt
+        +decodeMSFPToEML(bits: BigInt, variant: FPVariant): EMLPhiValue
+        +batchEncode(phis: EMLPhiValue[], variant: FPVariant): BigInt[]
+        +batchDecode(bitsArray: BigInt[], variant: FPVariant): EMLPhiValue[]
+        +quantizationError(phi: EMLPhiValue, variant: FPVariant): number
+        +findOptimalVariant(phi: EMLPhiValue): FPVariant
+    }
+
+    QuantizationEngine --> MSFPFormat : manages
+    QuantizationEngine --> EMLPhiValue : converts
+
+    %% ═══ P0-3: 模型分段映射 ═══
+    class ModelSegment {
+        +string segmentId
+        +number layerIndex
+        +number paramCount
+        +number computeCost
+        +string targetPRRId
+        +MSFPFormat quantFormat
+    }
+
+    class SegmentMapper {
+        -PartialReconfigurator reconfigurator
+        -QuantizationEngine quantEngine
+        +analyzeModel(modelDescriptor: DNNModelDescriptor): ModelSegment[]
+        +mapSegmentToPRR(segment: ModelSegment, prr: PRR): PRRMappingResult
+        +optimizeSegmentPlacement(segments: ModelSegment[], prrs: PRR[]): SegmentPlacement
+        +generateBitstreamSegment(segment: ModelSegment): Buffer
+        +validateMapping(segments: ModelSegment[]): ValidationResult
+    }
+
+    SegmentMapper --> ModelSegment : manages
+    SegmentMapper --> PartialReconfigurator : delegates
+    SegmentMapper --> QuantizationEngine : uses
+
+    %% ═══ P1-1: NPU 软核 ═══
+    class NPUInstruction {
+        +NPUOpcode opcode
+        +number[] operands
+        +MSFPFormat dataFormat
+    }
+
+    class NPUSoftCore {
+        -NPUInstruction[] instructionBuffer
+        -Map~string, SimdUnit~ simdUnits
+        -GSphereScheduler scheduler
+        +loadInstructions(instructions: NPUInstruction[]): void
+        +execute(): NPUExecutionResult
+        +registerSimdUnit(unit: SimdUnit): void
+        +batchMatMul(a: Matrix, b: Matrix, format: MSFPFormat): Matrix
+        +reduceSum(tensor: Tensor, axis: number): Tensor
+        +activate(input: Tensor, fn: ActivationFn): Tensor
+    }
+
+    class SimdUnit {
+        +string unitId
+        +number laneCount
+        +MSFPFormat supportedFormat
+        +executeLane(data: number[], opcode: NPUOpcode): number[]
+    }
+
+    NPUSoftCore --> NPUInstruction : executes
+    NPUSoftCore --> SimdUnit : orchestrates
+    NPUSoftCore --> GSphereScheduler : integrates with
+
+    %% ═══ P1-2: Catapult 资源池适配器 ═══
+    class CatapultResource {
+        +string resourceId
+        +CatapultResourceType resourceType
+        +number capacity
+        +number utilized
+        +string nodeId
+    }
+
+    class CatapultAdapter {
+        -TaiyiFPGAClient bridgeClient
+        -Map~string, CatapultResource~ resourcePool
+        +registerResource(resource: CatapultResource): void
+        +selectOptimalNode(requirements: ResourceRequirement): string
+        +allocateResources(requirements: ResourceRequirement): CatapultAllocation
+        +releaseResources(allocationId: string): void
+        +getPoolStatus(): CatapultPoolStatus
+        +fuseWithLiuRouting(requirement: ResourceRequirement): string
+    }
+
+    CatapultAdapter --> CatapultResource : manages
+    CatapultAdapter --> TaiyiFPGAClient : delegates routing
+
+    %% ═══ P1-3: 精度验证 + 重训练补偿 ═══
+    class PrecisionVerifier {
+        -QuantizationEngine quantEngine
+        -EvolvableHardware evolvableHW
+        +verifyInference(input: Tensor, output: Tensor, baseline: Tensor): VerificationResult
+        +detectPrecisionDrift(outputs: Tensor[], baseline: Tensor[]): DriftReport
+        +computeCompensation(drift: DriftReport): CompensationParams
+        +applyRetraining(params: CompensationParams): void
+        +runVerificationPipeline(): VerificationPipelineResult
+    }
+
+    PrecisionVerifier --> QuantizationEngine : uses
+    PrecisionVerifier --> EvolvableHardware : delegates evolution
+
+    %% ═══ 对偶映射表 ═══
+    class DualMappingEntry {
+        +string mappingId
+        +string brainwaveSide
+        +string sigmaCloudSide
+        +DualMappingCategory category
+        +BidirectionalConverter converter
+    }
+
+    class DualMappingTable {
+        -Map~string, DualMappingEntry~ entries
+        +registerMapping(entry: DualMappingEntry): void
+        +lookupByBrainwave(key: string): DualMappingEntry
+        +lookupBySigmaCloud(key: string): DualMappingEntry
+        +convertToBrainwave(sigmaData: any): any
+        +convertToSigmaCloud(brainwaveData: any): any
+        +validateAllMappings(): ValidationResult[]
+    }
+
+    DualMappingTable --> DualMappingEntry : manages
+
+    %% ═══ Brainwave 门面 ═══
+    class BrainwaveFacade {
+        -SRAMPoolAdapter sramAdapter
+        -QuantizationEngine quantEngine
+        -SegmentMapper segmentMapper
+        -NPUSoftCore npuCore
+        -CatapultAdapter catapultAdapter
+        -PrecisionVerifier verifier
+        -DualMappingTable mappingTable
+        +initialize(): void
+        +deployModel(model: DNNModelDescriptor): DeploymentResult
+        +executeInference(input: Tensor): InferenceResult
+        +reconfigureMapping(mappingId: string): void
+        +getSystemStatus(): BrainwaveSystemStatus
+        +shutdown(): void
+    }
+
+    BrainwaveFacade --> SRAMPoolAdapter : P0-1
+    BrainwaveFacade --> QuantizationEngine : P0-2
+    BrainwaveFacade --> SegmentMapper : P0-3
+    BrainwaveFacade --> NPUSoftCore : P1-1
+    BrainwaveFacade --> CatapultAdapter : P1-2
+    BrainwaveFacade --> PrecisionVerifier : P1-3
+    BrainwaveFacade --> DualMappingTable : config
+
+    %% ═══ 后端服务 ═══
+    class BrainwaveService {
+        -BrainwaveFacade facade
+        -BullMQ.Queue taskQueue
+        -Socket.IO.Server io
+        +deployModelAPI(req: Request): Promise~Response~
+        +executeInferenceAPI(req: Request): Promise~Response~
+        +getMappingStatus(req: Request): Promise~Response~
+        +streamStatus(socket: Socket): void
+    }
+
+    BrainwaveService --> BrainwaveFacade : orchestrates
+
+    %% ═══ 已有类（扩展标记） ═══
+    class PhiFieldMapper {
+        +mapExcitationToPRR() PRR
+        +mapBitstreamToExcitation() PhiExcitation
+        +calculateWindingNumber() number
+        +detectTopologicalTransition() boolean
+        +encodePhiToMSFP(phi: EMLPhiValue, variant: FPVariant): BigInt
+        +decodeMSFPToPhi(bits: BigInt, variant: FPVariant): EMLPhiValue
+    }
+
+    class GSphereScheduler {
+        +addSphere() void
+        +evolve() ClusterState
+        +syncFromPhiField() void
+        +registerNPUInstructions(instructions: NPUInstruction[]): void
+        +executeNPUOnSphere(sphereId: string, opcode: NPUOpcode): NPUExecutionResult
+    }
+
+    class PartialReconfigurator {
+        +definePRR() void
+        +reconfigure() ReconfigurationStatus
+        +mapSegmentToPRR(segment: ModelSegment): PRRMappingResult
+        +segmentAwareReconfigure(segments: ModelSegment[]): ReconfigurationStatus
+    }
+
+    class TaiyiFPGAClient {
+        +registerNode() void
+        +selectOptimalNode() string
+        +submitPhiTask() TaskResult
+        +selectWithCatapult(req: ResourceRequirement): string
+        +getCatapultPoolStatus(): CatapultPoolStatus
+    }

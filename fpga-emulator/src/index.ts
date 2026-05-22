@@ -27,6 +27,17 @@ export { EvolvableHardware } from './evolvable-hardware';
 export { GSphereScheduler, Chirality } from './gsphere-scheduler';
 export type { GSphere, ClusterConfig, ClusterState } from './gsphere-scheduler';
 
+// V5.0 Brainwave Integration
+export { SRAMMemoryPool } from './sramMemoryPool';
+export { PhiQuantizer } from './phiQuantizer';
+export { ModelPartitioner } from './modelPartitioner';
+export { NPUSoftCore } from './npuSoftCore';
+export type { NPUExecutionResult } from './npuSoftCore';
+export { CatapultPool } from './catapultPool';
+export type { ResourceRequirement, CatapultAllocation } from './catapultPool';
+export { PrecisionValidator } from './precisionValidator';
+export type { RetrainPlan } from './precisionValidator';
+
 // Export default configurations
 export {
   defaultHardwareSpec,

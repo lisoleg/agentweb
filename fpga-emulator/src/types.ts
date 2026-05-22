@@ -194,3 +194,147 @@ export interface ClusterEvolutionConfig {
   lagrangianBeta: number;
   couplingStrength: number;
 }
+
+// =============== V5.0 Brainwave Integration Types ===============
+
+// --- P0-1: Φ-SRAM Memory Pool ---
+export interface BRAMRegion {
+  id: string;
+  startAddr: number;
+  size: number;
+  prrId: string | null;
+  phiExcitationId: string | null;
+}
+
+export interface SRAMPoolNode {
+  fpgaId: string;
+  totalSRAM: number;
+  usedSRAM: number;
+  blockRamRegions: BRAMRegion[];
+  phiBoundarySync: number;
+}
+
+export interface GlobalSRAMPool {
+  nodes: Map<string, SRAMPoolNode>;
+  totalCapacity: number;
+  totalUsed: number;
+  interFpgaLatency: number;
+  phiFieldSyncInterval: number;
+}
+
+// --- P0-2: Φ Quantization Engine ---
+export type PrecisionMode = 'MS_FP8' | 'MS_FP9' | 'FP32';
+
+export interface MsFp8 {
+  sign: 0 | 1;
+  exponent: number;
+  mantissa: number;
+}
+
+export interface MsFp9 {
+  sign: 0 | 1;
+  exponent: number;
+  mantissa: number;
+}
+
+export interface QuantizedPhi {
+  magnitude: MsFp8 | MsFp9;
+  phase: number;
+  originalPhi: number;
+  quantizationError: number;
+  mode: PrecisionMode;
+}
+
+// --- P0-3: Model Partitioner ---
+export type ComputeNodeType = 'CONV' | 'FC' | 'POOL' | 'ACTIVATE' | 'NORM' | 'CUSTOM';
+
+export interface ComputeNode {
+  id: string;
+  type: ComputeNodeType;
+  params: number;
+  flops: number;
+  sramRequired: number;
+  fpgaAccelerable: boolean;
+}
+
+export interface DataFlowEdge {
+  from: string;
+  to: string;
+  tensorSize: number;
+}
+
+export interface DNNComputeGraph {
+  nodes: ComputeNode[];
+  edges: DataFlowEdge[];
+  totalParams: number;
+}
+
+export interface SubGraph {
+  id: string;
+  nodes: string[];
+  targetFpgaId: string;
+  sramAllocated: number;
+  phiExcitationId: string | null;
+  prrBinding: string | null;
+}
+
+// --- P1-1: NPU Soft Core ---
+export type SIMDOpcode = 'MAC' | 'LOAD' | 'STORE' | 'ACTIVATE' | 'SYNC';
+
+export interface NPUSIMDInstruction {
+  opcode: SIMDOpcode;
+  operands: number[];
+  megaOpsPerInstruction: number;
+}
+
+export interface MVUnit {
+  id: string;
+  precision: PrecisionMode;
+  accumulatorSize: number;
+  currentLoad: number;
+}
+
+export interface NPUSoftCoreConfig {
+  id: string;
+  clockFreq: number;
+  opsPerCycle: number;
+  simdWidth: number;
+  mvuUnits: MVUnit[];
+}
+
+// --- P1-2: Catapult Pool ---
+export interface CatapultNode {
+  nodeId: string;
+  dataCenter: string;
+  region: string;
+  fpgaCount: number;
+  totalSRAM: number;
+  liuScore: number;
+  bandwidth: number;
+  latency: number;
+  isActive: boolean;
+}
+
+export interface CatapultPoolConfig {
+  liuLoadWeight: number;
+  liuPhiFitWeight: number;
+  liuPhaseEntropyWeight: number;
+}
+
+// --- P1-3: Precision Validator ---
+export interface PrecisionValidationResult {
+  originalValue: number;
+  quantizedValue: number;
+  absoluteError: number;
+  relativeError: number;
+  passesThreshold: boolean;
+  threshold: number;
+}
+
+export interface RetrainTrigger {
+  modelId: string;
+  layerId: string;
+  currentError: number;
+  maxAcceptableError: number;
+  retrainRequired: boolean;
+}

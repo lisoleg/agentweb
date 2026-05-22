@@ -1,0 +1,180 @@
+%% ═══ 4.1 模型部署流程 (deployModel) ═══
+sequenceDiagram
+    actor User
+    participant API as Brainwave API
+    participant Svc as BrainwaveService
+    participant Facade as BrainwaveFacade
+    participant SM as SegmentMapper
+    participant QE as QuantizationEngine
+    participant SRAM as SRAMPoolAdapter
+    participant PR as PartialReconfigurator
+    participant PFM as PhiFieldMapper
+    participant DMT as DualMappingTable
+
+    User->>API: POST /brainwave/deploy {modelDescriptor}
+    API->>Svc: deployModelAPI(req)
+    Svc->>Facade: deployModel(modelDescriptor)
+    
+    rect rgb(240, 248, 255)
+        Note over Facade,SM: P0-3: 模型分段
+        Facade->>SM: analyzeModel(modelDescriptor)
+        SM-->>Facade: segments[]
+    end
+
+    rect rgb(255, 248, 240)
+        Note over Facade,QE: P0-2: 量化编码
+        loop 每个segment
+            Facade->>QE: findOptimalVariant(segment)
+            QE-->>Facade: recommendedFormat
+            Facade->>QE: batchEncode(phiValues, format)
+            QE-->>Facade: encodedBits[]
+        end
+    end
+
+    rect rgb(240, 255, 240)
+        Note over Facade,SRAM: P0-1: SRAM分配
+        loop 每个segment
+            Facade->>SRAM: allocateForExcitation(excitation)
+            SRAM->>PFM: mapExcitationToPRR(excitation)
+            PFM-->>SRAM: mappedPRR
+            SRAM-->>Facade: sramBank
+        end
+    end
+
+    rect rgb(255, 255, 240)
+        Note over Facade,PR: PRR重配置
+        Facade->>SM: optimizeSegmentPlacement(segments, prrs)
+        SM->>PR: segmentAwareReconfigure(segments)
+        PR-->>SM: reconfigStatus
+        SM-->>Facade: placement
+    end
+
+    rect rgb(248, 240, 255)
+        Note over Facade,DMT: 对偶映射注册
+        loop 每组对偶关系
+            Facade->>DMT: registerMapping(entry)
+        end
+    end
+
+    Facade-->>Svc: DeploymentResult
+    Svc->>API: Response {code, data, message}
+    API-->>User: 201 {deploymentId, mappings[], status}
+
+%% ═══ 4.2 推理执行流程 (executeInference) ═══
+sequenceDiagram
+    actor User
+    participant API as Brainwave API
+    participant Svc as BrainwaveService
+    participant Facade as BrainwaveFacade
+    participant NPU as NPUSoftCore
+    participant SIMD as SimdUnit
+    participant GS as GSphereScheduler
+    participant QE as QuantizationEngine
+    participant SRAM as SRAMPoolAdapter
+    participant PV as PrecisionVerifier
+
+    User->>API: POST /brainwave/infer {deploymentId, input}
+    API->>Svc: executeInferenceAPI(req)
+    Svc->>Facade: executeInference(inputTensor)
+
+    rect rgb(240, 248, 255)
+        Note over Facade,QE: 输入量化
+        Facade->>QE: encodeEMLToMSFP(inputPhi, fp8)
+        QE-->>Facade: encodedInput
+    end
+
+    rect rgb(255, 248, 240)
+        Note over Facade,SRAM: 加载SRAM
+        Facade->>SRAM: syncFromPhiField(currentState)
+        SRAM-->>Facade: synced
+    end
+
+    rect rgb(240, 255, 240)
+        Note over Facade,SIMD: NPU执行
+        Facade->>NPU: loadInstructions(instructions)
+        Facade->>NPU: execute()
+        loop 每条NPU指令
+            NPU->>SIMD: executeLane(data, opcode)
+            SIMD-->>NPU: laneResult
+        end
+        NPU->>GS: registerNPUInstructions(pending)
+        GS-->>NPU: evolutionSyncAck
+        NPU-->>Facade: executionResult
+    end
+
+    rect rgb(255, 255, 240)
+        Note over Facade,QE: 输出反量化
+        Facade->>QE: decodeMSFPToEML(outputBits, fp8)
+        QE-->>Facade: decodedPhi
+    end
+
+    rect rgb(248, 240, 255)
+        Note over Facade,PV: 精度验证
+        Facade->>PV: verifyInference(input, output, baseline)
+        PV->>PV: detectPrecisionDrift()
+        alt drift detected
+            PV->>PV: computeCompensation(drift)
+            PV-->>Facade: {verified: false, compensation}
+        else no drift
+            PV-->>Facade: {verified: true}
+        end
+    end
+
+    Facade-->>Svc: InferenceResult
+    Svc-->>API: Response
+    API-->>User: 200 {output, verification, latency}
+
+%% ═══ 4.3 Catapult资源调度流程 (fuseWithLiuRouting) ═══
+sequenceDiagram
+    participant Facade as BrainwaveFacade
+    participant CA as CatapultAdapter
+    participant Bridge as TaiyiFPGABridge
+    participant DMT as DualMappingTable
+
+    Facade->>CA: allocateResources(requirement)
+    CA->>CA: getPoolStatus()
+
+    alt Catapult池有充足资源
+        CA->>CA: selectOptimalNode(requirement)
+        CA-->>Facade: allocation
+    else 需要外部FPGA节点
+        CA->>Bridge: selectWithCatapult(requirement)
+        Bridge->>Bridge: Liu三因子评分: load×0.3 + phiFit×0.3 + (1-entropy)×0.4
+        Bridge-->>CA: selectedNodeId
+        CA-->>Facade: allocation
+    end
+
+    Facade->>DMT: registerMapping({Catapult:resourceId ↔ LiuRoute:nodeId, P1_2})
+    DMT-->>Facade: mappingId
+
+%% ═══ 4.4 初始化流程 (BrainwaveFacade.initialize) ═══
+sequenceDiagram
+    participant App as Application
+    participant Facade as BrainwaveFacade
+    participant DMT as DualMappingTable
+    participant SRAM as SRAMPoolAdapter
+    participant QE as QuantizationEngine
+    participant NPU as NPUSoftCore
+    participant CA as CatapultAdapter
+    participant PV as PrecisionVerifier
+
+    App->>Facade: initialize()
+
+    Facade->>DMT: registerMapping(P0-1: SRAM↔Φ)
+    Facade->>DMT: registerMapping(P0-2: MSFP↔EML)
+    Facade->>DMT: registerMapping(P0-3: Segment↔PRR)
+    Facade->>DMT: registerMapping(P1-1: NPU↔G-Sphere)
+    Facade->>DMT: registerMapping(P1-2: Catapult↔Liu)
+    Facade->>DMT: registerMapping(P1-3: Verify↔Evolve)
+
+    Facade->>QE: registerFormat(MS_FP8: {1,5,2,bias=15})
+    Facade->>QE: registerFormat(MS_FP9: {1,5,3,bias=15})
+
+    Facade->>SRAM: initialize(defaultSRAMConfig)
+    Facade->>NPU: registerSimdUnit(defaultSimdUnit)
+    Facade->>CA: registerResource(defaultCatapultResources)
+
+    Facade->>DMT: validateAllMappings()
+    DMT-->>Facade: validationResults[]
+
+    Facade-->>App: initialized
