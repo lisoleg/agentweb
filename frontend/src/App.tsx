@@ -9,6 +9,7 @@ import Identity from './pages/Identity';
 import AgentWorkbench from './pages/AgentWorkbench';
 import Governance from './pages/Governance';
 import NewsFeed from './pages/NewsFeed';
+import CognitiveMonitor from './pages/CognitiveMonitor';
 import Login from './pages/Login';
 import { useAuth } from './hooks/useAuth';
 
@@ -73,6 +74,14 @@ function App() {
           element={
             <ProtectedRoute>
               <NewsFeed />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/cognitive"
+          element={
+            <ProtectedRoute>
+              <CognitiveMonitor />
             </ProtectedRoute>
           }
         />
