@@ -38,6 +38,31 @@ export type { ResourceRequirement, CatapultAllocation } from './catapultPool';
 export { PrecisionValidator } from './precisionValidator';
 export type { RetrainPlan } from './precisionValidator';
 
+// V7.0 Supernode Semantic Alignment
+export { LiuDeterministicPathPinner } from './liuDeterministicPath';
+export type { PinnedPath, PathPinConfig, PathSwitchEvent } from './liuDeterministicPath';
+export { PhiCacheTierManager } from './phiCacheTier';
+export type { CacheTier, CacheEntry, CacheTierStats, PhiCacheConfig } from './phiCacheTier';
+export { ResourceProfileManager, getResourceProfileManager } from './resourceProfile';
+export type { ResourceProfile, NodeResource, ScenarioType, ResourceScore, ResourceAllocation } from './resourceProfile';
+
+// V8.0 Agent Economy Settlement (TS type exports only - contracts are Solidity)
+export type {
+  AgentIdentity,
+  AgentFeedback,
+  PhiWeightedSummary,
+  AgentValidation,
+  PhiValidationSummary,
+  PricingTier,
+  PaymentRequirement,
+  Phi402SettlementRecord,
+  PhiPricingConfig,
+  MandateType,
+  MandateStatus,
+  Mandate,
+  PhiBudgetCalculation,
+} from './types';
+
 // Export default configurations
 export {
   defaultHardwareSpec,

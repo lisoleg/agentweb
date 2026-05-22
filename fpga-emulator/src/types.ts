@@ -344,3 +344,211 @@ export interface RetrainTrigger {
   maxAcceptableError: number;
   retrainRequired: boolean;
 }
+
+// =============== V7.0 Supernode Alignment Types ===============
+
+// --- V7.0-1: Liu Deterministic Path Pinning ---
+export interface PinnedPath {
+  flowId: string;
+  primaryNodeId: string;
+  backupNodeId: string | null;
+  pinnedAt: number;
+  lastUsed: number;
+  switchCount: number;
+  phiPhaseContinuity: number;  // Φ相位连续性评分 0-1
+}
+
+export interface PathPinConfig {
+  virtualNodeCount: number;
+  faultDetectionTimeoutMs: number;
+  maxSwitchCount: number;
+  backupCount: number;
+  phiPhaseThreshold: number;
+}
+
+export interface PathSwitchEvent {
+  flowId: string;
+  fromNodeId: string;
+  toNodeId: string;
+  reason: 'FAULT' | 'PHASE_DISCONTINUITY' | 'MANUAL';
+  timestamp: number;
+}
+
+// --- V7.0-2: Φ-CacheTier Three-Layer Storage ---
+export type CacheTier = 'HOT' | 'WARM' | 'COLD';
+
+export interface CacheEntry<T = any> {
+  key: string;
+  value: T;
+  tier: CacheTier;
+  phiScore: number;
+  createdAt: number;
+  lastAccessedAt: number;
+  ttlMs: number;
+  accessCount: number;
+  sizeBytes: number;
+  metadata?: Record<string, any>;
+}
+
+export interface CacheTierStats {
+  tier: CacheTier;
+  entryCount: number;
+  totalSizeBytes: number;
+  hitRate: number;
+  avgPhiScore: number;
+  avgAccessCount: number;
+  evictionCount: number;
+}
+
+export interface PhiCacheConfig {
+  hotMaxBytes: number;
+  warmMaxBytes: number;
+  coldMaxBytes: number;
+  warmTtlMs: number;
+  coldTtlMs: number;
+  phiHotThreshold: number;
+  phiWarmThreshold: number;
+  evictionPolicy: 'LRU' | 'PHI_PRIORITY' | 'HYBRID';
+}
+
+// --- V7.0-3: Four-Dimensional ResourceProfile ---
+export interface ResourceProfile {
+  compute: number;
+  memoryBandwidth: number;
+  memoryCapacity: number;
+  ioBandwidth: number;
+}
+
+export interface NodeResource {
+  nodeId: string;
+  computeAvailable: number;
+  computeTotal: number;
+  memoryBandwidthAvailable: number;
+  memoryBandwidthTotal: number;
+  memoryCapacityAvailable: number;
+  memoryCapacityTotal: number;
+  ioBandwidthAvailable: number;
+  ioBandwidthTotal: number;
+  loadFactor: number;
+  phiFit: number;
+  phaseEntropy: number;
+}
+
+export type ScenarioType = 'M78_INFERENCE' | 'M84_PHI_COMPUTE' | 'PHI402_MICROPAYMENT' | 'MODEL_LOADING' | 'GENERAL';
+
+export interface ResourceScore {
+  nodeId: string;
+  overallScore: number;
+  computeScore: number;
+  memoryBandwidthScore: number;
+  memoryCapacityScore: number;
+  ioBandwidthScore: number;
+  liuScore: number;
+  scenario: ScenarioType;
+}
+
+// =============== V8.0 Agent Economy Settlement Types ===============
+
+// --- V8.0-1: PhiAgentNFT Three Registries ---
+export interface AgentIdentity {
+  agentId: number;           // NFT tokenId
+  owner: string;            // NFT holder address
+  agentWallet: string;      // Operational wallet
+  agentURI: string;         // Registration file URI
+  phiScore: number;         // Φ value (0-10000)
+  phiPhase: number;         // Φ phase angle
+  registeredAt: number;
+  active: boolean;
+}
+
+export interface AgentFeedback {
+  client: string;
+  value: number;
+  valueDecimals: number;
+  tag1: string;
+  tag2: string;
+  revoked: boolean;
+  feedbackIndex: number;
+}
+
+export interface PhiWeightedSummary {
+  count: number;
+  phiWeightedScore: number;
+}
+
+export interface AgentValidation {
+  validator: string;
+  agentId: number;
+  requestHash: string;
+  responseType: 0 | 1 | 2 | 3;  // StakeReExec | ZkML | TEE | Arbiter
+  result: number;                // 0-100
+  responseHash: string;
+  tag: string;
+  timestamp: number;
+}
+
+export interface PhiValidationSummary {
+  count: number;
+  avgResult: number;
+  phaseContinuityScore: number;
+}
+
+// --- V8.0-2: Phi402Settlement Semantic Micropayment ---
+export type PricingTier = 'FREE' | 'STANDARD' | 'PREMIUM';
+
+export interface PaymentRequirement {
+  token: string;
+  amount: number;
+  recipient: string;
+  resource: string;
+  validBefore: number;
+  validAfter: number;
+}
+
+export interface Phi402SettlementRecord {
+  client: string;
+  recipient: string;
+  token: string;
+  amount: number;
+  clientPhi: number;
+  pricingTier: 0 | 1 | 2;  // 0=FREE, 1=STANDARD, 2=PREMIUM
+  resourceHash: string;
+  settledAt: number;
+  settled: boolean;
+}
+
+export interface PhiPricingConfig {
+  freeThreshold: number;      // Φ >= this → FREE (default 7500)
+  standardThreshold: number;  // Φ >= this → STANDARD (default 4000)
+  premiumMultiplier: number;  // PREMIUM multiplier (default 200 = 2.0x)
+}
+
+// --- V8.0-3: PhiMandate Digital Authorization ---
+export type MandateType = 'INTENT' | 'CART' | 'PAYMENT';
+export type MandateStatus = 'PENDING' | 'ACTIVE' | 'REVOKED' | 'EXPIRED' | 'EXECUTED';
+
+export interface Mandate {
+  mandateId: number;
+  mandateType: MandateType;
+  status: MandateStatus;
+  delegator: string;
+  delegate: string;
+  budgetLimit: number;
+  spentAmount: number;
+  paymentToken: string;
+  phiScoreRequired: number;
+  phiScoreAtCreation: number;
+  createdAt: number;
+  expiresAt: number;
+  conditions: string;
+  parentMandateId: number;
+  phiPhaseContinuous: boolean;
+}
+
+export interface PhiBudgetCalculation {
+  agent: string;
+  phiScore: number;
+  baseBudget: number;
+  effectiveBudget: number;
+  multiplier: number;
+}
