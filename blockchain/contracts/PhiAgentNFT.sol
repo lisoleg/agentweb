@@ -80,6 +80,9 @@ contract PhiAgentNFT is ERC721, ERC721URIStorage, Ownable, Pausable, ReentrancyG
     uint256 public reputationPhiWeight;     // Φ weight in reputation (0-10000, default 3000 = 30%)
     uint256 public validationPhiThreshold;  // Min Φ for validator (default 5000 = 0.50)
 
+    /// @notice V10.0: NegativeCaseBook合约地址
+    address public negativeCaseBook;
+
     // =============== Events ===============
 
     // Identity
@@ -156,6 +159,11 @@ contract PhiAgentNFT is ERC721, ERC721URIStorage, Ownable, Pausable, ReentrancyG
             registeredAt: block.timestamp,
             active: true
         });
+
+        // V10.0: 强制学习所有必学反面案例
+        if (negativeCaseBook != address(0)) {
+            INegativeCaseBook(negativeCaseBook).mandatoryLearnAll(msg.sender);
+        }
 
         emit AgentRegistered(agentId, msg.sender, agentURI, block.timestamp);
     }
@@ -545,6 +553,13 @@ contract PhiAgentNFT is ERC721, ERC721URIStorage, Ownable, Pausable, ReentrancyG
         _unpause();
     }
 
+    /**
+     * @notice V10.0: 设置NegativeCaseBook合约地址
+     */
+    function setNegativeCaseBook(address _negativeCaseBook) external onlyOwner {
+        negativeCaseBook = _negativeCaseBook;
+    }
+
     // =============== Internal ===============
 
     function _stringsEqual(string memory a, string memory b) internal pure returns (bool) {
@@ -560,4 +575,10 @@ contract PhiAgentNFT is ERC721, ERC721URIStorage, Ownable, Pausable, ReentrancyG
     function supportsInterface(bytes4 interfaceId) public view override(ERC721, ERC721URIStorage) returns (bool) {
         return super.supportsInterface(interfaceId);
     }
+}
+
+// =============== V10.0 Interfaces ===============
+
+interface INegativeCaseBook {
+    function mandatoryLearnAll(address agent) external returns (uint256);
 }

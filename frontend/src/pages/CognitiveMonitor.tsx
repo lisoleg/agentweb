@@ -55,7 +55,14 @@ import {
   CheckCircle as SuccessIcon,
   Error as ErrorIcon,
   HourglassEmpty as PendingIcon,
+  Work as LaborIcon,
+  Biology as MetabolismIcon,
 } from '@mui/icons-material';
+
+// V10.0 Panel imports
+import ConstitutionPanel from '../components/ConstitutionPanel';
+import LaborMarketPanel from '../components/LaborMarketPanel';
+import MetabolismPanel from '../components/MetabolismPanel';
 
 // ============ Types ============
 
@@ -227,14 +234,14 @@ export default function CognitiveMonitor() {
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Box>
           <Typography variant="h4" fontWeight="bold">
-            V6.0 AGI Cognitive Monitor
+            V10.0 AGI Cognitive Monitor
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Real-time monitoring for AGI cognitive modules + Agent economy settlement layer
+            Real-time monitoring for AGI cognitive modules + Constitution + Labor Market + Metabolism
           </Typography>
         </Box>
         <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-          <Chip label="API V6.0.0" color="primary" size="small" />
+          <Chip label="API V10.0.0" color="primary" size="small" />
           <Chip label={`Φ-BFT: ${(consensus.currentThreshold * 100).toFixed(0)}%`} color="secondary" size="small" />
           <Tooltip title="Refresh data">
             <IconButton onClick={refresh} size="small">
@@ -307,6 +314,9 @@ export default function CognitiveMonitor() {
           <Tab icon={<PaymentIcon />} iconPosition="start" label="Phi-402 Payment" />
           <Tab icon={<IdentityIcon />} iconPosition="start" label="PhiAgent Identity" />
           <Tab icon={<ConsensusIcon />} iconPosition="start" label="Consensus" />
+          <Tab icon={<GavelIcon />} iconPosition="start" label="Constitution" />
+          <Tab icon={<LaborIcon />} iconPosition="start" label="Labor Market" />
+          <Tab icon={<MetabolismIcon />} iconPosition="start" label="Metabolism" />
         </Tabs>
 
         {/* Tab 0: M78 HoTT Gateway */}
@@ -532,11 +542,26 @@ export default function CognitiveMonitor() {
             </Grid>
           </Grid>
         </TabPanel>
+
+        {/* Tab 6: Constitution (V10.0) */}
+        <TabPanel value={tabValue} index={6}>
+          <ConstitutionPanel />
+        </TabPanel>
+
+        {/* Tab 7: Labor Market (V10.0) */}
+        <TabPanel value={tabValue} index={7}>
+          <LaborMarketPanel />
+        </TabPanel>
+
+        {/* Tab 8: Metabolism (V10.0) */}
+        <TabPanel value={tabValue} index={8}>
+          <MetabolismPanel />
+        </TabPanel>
       </Paper>
 
       {/* Module Status Summary */}
       <Paper sx={{ p: 2 }}>
-        <Typography variant="h6" gutterBottom>V6.0 Module Status Overview</Typography>
+        <Typography variant="h6" gutterBottom>V10.0 Module Status Overview</Typography>
         <TableContainer>
           <Table size="small">
             <TableHead>
@@ -559,6 +584,11 @@ export default function CognitiveMonitor() {
               <TableRow><TableCell>Self-Ref Consensus</TableCell><TableCell><Chip label="P2" color="info" size="small" /></TableCell><TableCell><StatusChip online={consensus.isOnline} /></TableCell><TableCell>Taiyi Oracle</TableCell><TableCell>τ={consensus.currentThreshold.toFixed(2)}</TableCell></TableRow>
               <TableRow><TableCell>Hex Dual Conv</TableCell><TableCell><Chip label="P2" color="info" size="small" /></TableCell><TableCell><StatusChip online={true} /></TableCell><TableCell>Taiyi AGI</TableCell><TableCell>6 FPGA templates</TableCell></TableRow>
               <TableRow><TableCell>Bio-Φ Interface</TableCell><TableCell><Chip label="P2" color="info" size="small" /></TableCell><TableCell><StatusChip online={true} /></TableCell><TableCell>IIT+Physiology</TableCell><TableCell>Protocol only</TableCell></TableRow>
+              <TableRow><TableCell>Constitution</TableCell><TableCell><Chip label="P0" color="error" size="small" /></TableCell><TableCell><StatusChip online={true} /></TableCell><TableCell>V10.0 Governance</TableCell><TableCell>67% amendment threshold</TableCell></TableRow>
+              <TableRow><TableCell>NegativeCaseBook</TableCell><TableCell><Chip label="P0" color="error" size="small" /></TableCell><TableCell><StatusChip online={true} /></TableCell><TableCell>V10.0 Learning</TableCell><TableCell>Mandatory case learning</TableCell></TableRow>
+              <TableRow><TableCell>AI Labor Market</TableCell><TableCell><Chip label="P1" color="warning" size="small" /></TableCell><TableCell><StatusChip online={true} /></TableCell><TableCell>V10.0 Economy</TableCell><TableCell>Labor protection + disputes</TableCell></TableRow>
+              <TableRow><TableCell>Metabolism</TableCell><TableCell><Chip label="P1" color="warning" size="small" /></TableCell><TableCell><StatusChip online={true} /></TableCell><TableCell>V10.0 Bio-Inspired</TableCell><TableCell>Growth→Stable→Aging→Hibernation→Regen</TableCell></TableRow>
+              <TableRow><TableCell>PhiStaking Evolution</TableCell><TableCell><Chip label="P2" color="info" size="small" /></TableCell><TableCell><StatusChip online={true} /></TableCell><TableCell>V10.0 Governance</TableCell><TableCell>Evolution proposals + voting</TableCell></TableRow>
             </TableBody>
           </Table>
         </TableContainer>

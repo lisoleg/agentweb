@@ -102,6 +102,39 @@ export type {
   PhiPriceQuote,
 } from './types';
 
+// V10.0 Constitution & Governance (TS type exports only)
+export type {
+  // Constitution
+  AmendmentState,
+  Clause,
+  Amendment,
+  // NegativeCaseBook Enhanced
+  CaseCategory,
+  NegativeCaseV10,
+  // AI Labor Market
+  OrderStatus,
+  DisputeStatus,
+  AgentLaborProfile,
+  EmployerProfile,
+  LaborOrder,
+  LaborDispute,
+  // Metabolism
+  MetabolismPhase,
+  MetabolismState,
+  // PhiStaking Evolution
+  EvolutionState,
+  EvolutionProposal,
+} from './types';
+
+// V10.0 FPGA Metabolism Hardware Mapping Types
+export type {
+  FPGAMetabolismState,
+  MetabolismHardwareMapping,
+  MetabolismEvent,
+  MetabolismConfig,
+} from './metabolism-types';
+export { MetabolismPhase as FPGAMetabolismPhase } from './metabolism-types';
+
 // Export default configurations
 export {
   defaultHardwareSpec,

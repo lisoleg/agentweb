@@ -107,6 +107,9 @@ contract CircuitBreaker is Ownable, Pausable, ReentrancyGuard {
     /// @notice AdversarialReview合约地址
     address public adversarialReview;
 
+    /// @notice V10.0: Constitution合约地址
+    address public constitution;
+
     /// @notice 管理员
     mapping(address => bool) public admins;
 
@@ -353,6 +356,18 @@ contract CircuitBreaker is Ownable, Pausable, ReentrancyGuard {
         emit CircuitStateChanged(agentId, oldState, CircuitState.OPERATIONAL, "admin_reset", block.timestamp);
     }
 
+    /**
+     * @notice V10.0: 宪法紧急熔断（由Constitution.emergencyPause()触发）
+     * @dev 全局熔断，将所有活跃Agent置为CIRCUIT_BROKEN状态
+     */
+    function constitutionEmergencyBreak() external {
+        require(msg.sender == constitution || admins[msg.sender] || msg.sender == owner(),
+                "CircuitBreaker: not constitution or admin");
+        // 宪法级紧急熔断 - 触发合约暂停
+        _pause();
+        emit CircuitStateChanged(0, CircuitState.OPERATIONAL, CircuitState.CIRCUIT_BROKEN, "constitution_emergency", block.timestamp);
+    }
+
     // =============== View Functions ===============
 
     function getAgentCircuitState(uint256 agentId) external view returns (
@@ -438,6 +453,13 @@ contract CircuitBreaker is Ownable, Pausable, ReentrancyGuard {
 
     function setAdversarialReview(address _adversarialReview) external onlyOwner {
         adversarialReview = _adversarialReview;
+    }
+
+    /**
+     * @notice V10.0: 设置Constitution合约地址
+     */
+    function setConstitution(address _constitution) external onlyOwner {
+        constitution = _constitution;
     }
 
     function addAdmin(address _admin) external onlyOwner {

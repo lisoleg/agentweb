@@ -31,7 +31,8 @@ contract AdversarialReview is Ownable, Pausable, ReentrancyGuard {
         APPROVED,           // 通过
         REJECTED,           // 拒绝
         CONDITIONAL,        // 有条件通过
-        ARBITRATION         // 仲裁中
+        ARBITRATION,        // 仲裁中
+        LABOR_DISPUTE       // V10.0: 劳动争议
     }
 
     enum SessionStatus {
@@ -173,6 +174,7 @@ contract AdversarialReview is Ownable, Pausable, ReentrancyGuard {
     event ReviewerAssigned(ReviewRole role, address reviewer);
     event ReviewerRemoved(ReviewRole role, address reviewer);
     event ReviewRewardPaid(address indexed reviewer, uint256 amount);
+    event LaborDisputeSubmitted(uint256 indexed orderId, uint256 indexed disputeId, uint256 sessionId, uint256 timestamp);
 
     // =============== Modifiers ===============
 
@@ -370,6 +372,30 @@ contract AdversarialReview is Ownable, Pausable, ReentrancyGuard {
         arbitrator = _arbitrator;
     }
 
+    /**
+     * @notice V10.0: 提交劳动争议（由AILaborMarket.fileDispute()调用）
+     * @param orderId 劳动订单ID
+     * @param disputeId 劳动争议ID
+     * @return sessionId 评审会话ID
+     */
+    function submitLaborDispute(uint256 orderId, uint256 disputeId) external returns (uint256 sessionId) {
+        // 创建劳动争议评审会话
+        sessionId = s_nextSessionId++;
+        ReviewSession storage session = sessions[sessionId];
+        session.sessionId = sessionId;
+        session.targetAgentId = 0; // 劳动争议不针对特定Agent
+        session.submitter = msg.sender;
+        session.subject = string(abi.encodePacked("Labor Dispute: Order #", _toString(orderId)));
+        session.description = string(abi.encodePacked("Dispute #", _toString(disputeId), " for Order #", _toString(orderId)));
+        session.contentHash = bytes32(disputeId);
+        session.status = SessionStatus.ARBITRATION;
+        session.finalDecision = ReviewDecision.LABOR_DISPUTE;
+        session.submittedAt = block.timestamp;
+        session.reviewDeadline = block.timestamp + reviewDeadlineSeconds;
+
+        emit LaborDisputeSubmitted(orderId, disputeId, sessionId, block.timestamp);
+    }
+
     // =============== View Functions ===============
 
     function getReviewByRole(uint256 sessionId, ReviewRole role) external view returns (
@@ -542,5 +568,23 @@ contract AdversarialReview is Ownable, Pausable, ReentrancyGuard {
         if (roleReviewers[ReviewRole.SECURITY_AUDITOR] == reviewer) return ReviewRole.SECURITY_AUDITOR;
         if (roleReviewers[ReviewRole.UX_OFFICER] == reviewer) return ReviewRole.UX_OFFICER;
         return ReviewRole.ARCHITECT; // fallback（不会到达）
+    }
+
+    /// @dev uint256转string
+    function _toString(uint256 value) internal pure returns (string memory) {
+        if (value == 0) return "0";
+        uint256 temp = value;
+        uint256 digits;
+        while (temp != 0) {
+            digits++;
+            temp /= 10;
+        }
+        bytes memory buffer = new bytes(digits);
+        while (value != 0) {
+            digits -= 1;
+            buffer[digits] = bytes1(uint8(48 + uint256(value % 10)));
+            value /= 10;
+        }
+        return string(buffer);
     }
 }

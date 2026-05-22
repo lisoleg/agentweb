@@ -54,6 +54,52 @@ contract PhiStaking is Ownable, Pausable, ReentrancyGuard {
     mapping(address => uint256) private s_rewardPerTokenPaid;
     mapping(address => uint256) public s_rewards; // Pending rewards
 
+    // =============== V10.0 Evolution Proposal ===============
+
+    /// @notice V10.0: 进化提案状态枚举
+    enum EvolutionState {
+        PROPOSED,      // 已提议
+        VOTING,        // 投票中
+        EXECUTED,      // 已执行
+        REJECTED,      // 已否决
+        EXPIRED        // 已过期
+    }
+
+    /// @notice V10.0: 进化提案结构
+    struct EvolutionProposal {
+        uint256 proposalId;        // 提案ID
+        address proposer;          // 提议者
+        string title;              // 标题
+        string description;        // 描述
+        bytes executionData;       // 执行数据（合约调用）
+        uint256 votingStart;       // 投票开始
+        uint256 votingEnd;         // 投票结束
+        uint256 yesVotes;          // 赞成票
+        uint256 noVotes;           // 反对票
+        EvolutionState state;      // 状态
+        mapping(address => bool) hasVoted;  // 是否已投票
+    }
+
+    /// @notice V10.0: 提案总数
+    uint256 public totalEvolutionProposals;
+
+    /// @notice V10.0: proposalId => EvolutionProposal
+    mapping(uint256 => EvolutionProposal) public evolutionProposals;
+
+    /// @notice V10.0: Constitution合约地址
+    address public constitution;
+
+    /// @notice V10.0: 进化提案投票期（默认7天）
+    uint256 public evolutionVotingPeriod;
+
+    /// @notice V10.0: 进化提案通过阈值（基点，6700=67%）
+    uint256 public evolutionThreshold;
+
+    /// @notice V10.0: 进化提案事件
+    event EvolutionProposed(uint256 indexed proposalId, address indexed proposer, string title, uint256 timestamp);
+    event EvolutionVoted(uint256 indexed proposalId, address indexed voter, bool support, uint256 votingPower, uint256 timestamp);
+    event EvolutionExecuted(uint256 indexed proposalId, bool passed, uint256 timestamp);
+
     // =============== Events ===============
 
     event Staked(address indexed user, uint256 amount, uint256 phiValue, uint256 timestamp);
@@ -81,6 +127,8 @@ contract PhiStaking is Ownable, Pausable, ReentrancyGuard {
         maxStakeAmount = _maxStakeAmount;
         phiBoostRate = 5000; // Default 50% boost at max Φ
         lockDuration = 0; // No lock by default
+        evolutionVotingPeriod = 7 days;
+        evolutionThreshold = 6700; // 67%
     }
 
     // =============== External Functions ===============
@@ -331,6 +379,97 @@ contract PhiStaking is Ownable, Pausable, ReentrancyGuard {
         );
     }
 
+    // =============== V10.0 Evolution Proposal Functions ===============
+
+    /**
+     * @notice V10.0: 提出进化提案
+     * @param title 标题
+     * @param description 描述
+     * @param executionData 执行数据
+     * @return proposalId 提案ID
+     */
+    function proposeEvolution(
+        string calldata title,
+        string calldata description,
+        bytes calldata executionData
+    ) external whenNotPaused returns (uint256 proposalId) {
+        require(s_stakes[msg.sender].amount > 0, "PhiStaking: not staked");
+        require(bytes(title).length > 0, "PhiStaking: empty title");
+
+        // 宪法校验钩子
+        if (constitution != address(0)) {
+            require(!IConstitution(constitution).constitutionPaused(), "PhiStaking: constitution paused");
+        }
+
+        totalEvolutionProposals++;
+        proposalId = totalEvolutionProposals;
+
+        EvolutionProposal storage proposal = evolutionProposals[proposalId];
+        proposal.proposalId = proposalId;
+        proposal.proposer = msg.sender;
+        proposal.title = title;
+        proposal.description = description;
+        proposal.executionData = executionData;
+        proposal.votingStart = block.timestamp;
+        proposal.votingEnd = block.timestamp + evolutionVotingPeriod;
+        proposal.yesVotes = 0;
+        proposal.noVotes = 0;
+        proposal.state = EvolutionState.VOTING;
+
+        emit EvolutionProposed(proposalId, msg.sender, title, block.timestamp);
+    }
+
+    /**
+     * @notice V10.0: 对进化提案投票
+     * @param proposalId 提案ID
+     * @param support 是否赞成
+     */
+    function voteOnEvolution(uint256 proposalId, bool support) external whenNotPaused {
+        EvolutionProposal storage proposal = evolutionProposals[proposalId];
+        require(proposal.state == EvolutionState.VOTING, "PhiStaking: not in voting");
+        require(block.timestamp < proposal.votingEnd, "PhiStaking: voting ended");
+        require(!proposal.hasVoted[msg.sender], "PhiStaking: already voted");
+        require(s_stakes[msg.sender].amount > 0, "PhiStaking: not staked");
+
+        uint256 votingPower = this.getVotingPower(msg.sender);
+        require(votingPower > 0, "PhiStaking: no voting power");
+
+        proposal.hasVoted[msg.sender] = true;
+        if (support) {
+            proposal.yesVotes += votingPower;
+        } else {
+            proposal.noVotes += votingPower;
+        }
+
+        emit EvolutionVoted(proposalId, msg.sender, support, votingPower, block.timestamp);
+    }
+
+    /**
+     * @notice V10.0: 执行进化提案（投票期结束后）
+     * @param proposalId 提案ID
+     */
+    function executeEvolution(uint256 proposalId) external whenNotPaused {
+        EvolutionProposal storage proposal = evolutionProposals[proposalId];
+        require(proposal.state == EvolutionState.VOTING, "PhiStaking: not in voting");
+        require(block.timestamp >= proposal.votingEnd, "PhiStaking: voting not ended");
+
+        uint256 totalVotes = proposal.yesVotes + proposal.noVotes;
+        bool passed = false;
+        if (totalVotes > 0) {
+            passed = ((proposal.yesVotes * 10000) / totalVotes) >= evolutionThreshold;
+        }
+
+        proposal.state = passed ? EvolutionState.EXECUTED : EvolutionState.REJECTED;
+        emit EvolutionExecuted(proposalId, passed, block.timestamp);
+    }
+
+    /**
+     * @notice V10.0: 设置Constitution合约地址
+     */
+    function setConstitution(address _constitution) external onlyOwner {
+        constitution = _constitution;
+    }
+
     // =============== Admin Functions ===============
 
     /**
@@ -395,4 +534,10 @@ contract PhiStaking is Ownable, Pausable, ReentrancyGuard {
     function hasStaked(address user) external view returns (bool) {
         return s_stakes[user].amount > 0;
     }
+}
+
+// =============== V10.0 Interfaces ===============
+
+interface IConstitution {
+    function constitutionPaused() external view returns (bool);
 }

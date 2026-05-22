@@ -100,6 +100,39 @@ contract TaiyiReward is Ownable, ReentrancyGuard {
     /// @notice Φ值宽限期系数（高Φ可增加宽限期，单位: 周期/1000Φ）
     uint256 public phiGraceMultiplier;
 
+    // ── V10.0 新陈代谢类型 ──────────────────
+
+    /// @notice 新陈代谢阶段枚举
+    enum MetabolismPhase {
+        GROWTH,        // 成长期
+        STABLE,        // 稳定期
+        AGING,         // 衰老期
+        HIBERNATION,   // 冬眠期
+        REGENERATION   // 再生期
+    }
+
+    /// @notice 新陈代谢状态
+    struct MetabolismState {
+        uint256 baseMetabolicRate;      // 基础代谢率 (0-10000)
+        uint256 effectiveMetabolicRate; // 有效代谢率 (0-10000)
+        uint256 age;                     // Agent年龄（epoch数）
+        uint256 agingRate;              // 衰老速率 (基点/epoch)
+        bool hibernating;               // 是否冬眠中
+        uint256 hibernationStart;       // 冬眠开始时间
+        uint256 regenerationCount;     // 再生次数
+        uint256 lastActivityEpoch;      // 最近活跃epoch
+        MetabolismPhase phase;          // 当前阶段
+    }
+
+    /// @notice agent地址 => 新陈代谢状态
+    mapping(address => MetabolismState) public s_metabolism;
+
+    /// @notice 新陈代谢事件
+    event MetabolismUpdated(address indexed node, uint256 effectiveRate, MetabolismPhase phase, uint256 timestamp);
+    event HibernationEntered(address indexed node, uint256 timestamp);
+    event HibernationExited(address indexed node, uint256 timestamp);
+    event RegenerationCompleted(address indexed node, uint256 regenerationCount, uint256 newRate, uint256 timestamp);
+
     // ── V9.0 生存焦虑事件 ──────────────────
 
     /// @notice Agent收到收入
@@ -671,6 +704,168 @@ contract TaiyiReward is Ownable, ReentrancyGuard {
             str[3 + i * 2] = alphabet[uint8(value[i + 12] & 0x0f)];
         }
         return string(str);
+    }
+
+    // ── V10.0 新陈代谢函数 ──────────────────
+
+    /**
+     * @notice 更新Agent新陈代谢状态
+     * @param node Agent节点地址
+     * @param activity 活动量（0-10000）
+     */
+    function updateMetabolism(address node, uint256 activity) external onlyValidator {
+        require(node != address(0), "TaiyiReward: zero node address");
+        require(activity <= 10000, "TaiyiReward: activity exceeds max");
+
+        _advanceEpoch();
+        MetabolismState storage meta = s_metabolism[node];
+
+        // 初始化（如未初始化）
+        if (meta.baseMetabolicRate == 0) {
+            meta.baseMetabolicRate = 5000;   // 默认基础代谢率 50%
+            meta.effectiveMetabolicRate = 5000;
+            meta.agingRate = 100;             // 默认衰老速率 1%/epoch
+            meta.phase = MetabolismPhase.GROWTH;
+        }
+
+        // 如果正在冬眠，不更新
+        if (meta.hibernating) return;
+
+        // 计算有效代谢率: effectiveRate = base × (1 + activity × 0.1) / 10000
+        // activity范围0-10000, 0.1 → 放大1000
+        uint256 activityBonus = (activity * 1000) / 10000; // activity × 0.1
+        uint256 newEffectiveRate = meta.baseMetabolicRate + (meta.baseMetabolicRate * activityBonus) / 10000;
+        if (newEffectiveRate > 10000) newEffectiveRate = 10000;
+        meta.effectiveMetabolicRate = newEffectiveRate;
+
+        // 更新年龄
+        if (meta.lastActivityEpoch > 0 && currentEpoch > meta.lastActivityEpoch) {
+            meta.age += (currentEpoch - meta.lastActivityEpoch);
+        }
+        meta.lastActivityEpoch = currentEpoch;
+
+        // 根据年龄和代谢率更新阶段
+        if (meta.age < 30) {
+            meta.phase = MetabolismPhase.GROWTH;
+        } else if (meta.effectiveMetabolicRate >= 3000) {
+            meta.phase = MetabolismPhase.STABLE;
+        } else if (meta.effectiveMetabolicRate >= 1000) {
+            meta.phase = MetabolismPhase.AGING;
+        } else {
+            meta.phase = MetabolismPhase.AGING;
+        }
+
+        // 衰老：每次更新降低基础代谢率
+        if (meta.age > 30) {
+            uint256 decay = (meta.baseMetabolicRate * meta.agingRate) / 10000;
+            if (meta.baseMetabolicRate > decay) {
+                meta.baseMetabolicRate -= decay;
+            } else {
+                meta.baseMetabolicRate = 100; // 最低基础代谢率
+            }
+        }
+
+        emit MetabolismUpdated(node, meta.effectiveMetabolicRate, meta.phase, block.timestamp);
+    }
+
+    /**
+     * @notice 进入冬眠
+     * @param node Agent节点地址
+     */
+    function enterHibernation(address node) external onlyValidator {
+        MetabolismState storage meta = s_metabolism[node];
+        require(!meta.hibernating, "TaiyiReward: already hibernating");
+        require(meta.baseMetabolicRate > 0, "TaiyiReward: not initialized");
+
+        meta.hibernating = true;
+        meta.hibernationStart = block.timestamp;
+        meta.phase = MetabolismPhase.HIBERNATION;
+        // 冬眠期间有效代谢率降至10%
+        meta.effectiveMetabolicRate = meta.baseMetabolicRate / 10;
+
+        emit HibernationEntered(node, block.timestamp);
+        emit MetabolismUpdated(node, meta.effectiveMetabolicRate, MetabolismPhase.HIBERNATION, block.timestamp);
+    }
+
+    /**
+     * @notice 退出冬眠
+     * @param node Agent节点地址
+     */
+    function exitHibernation(address node) external onlyValidator {
+        MetabolismState storage meta = s_metabolism[node];
+        require(meta.hibernating, "TaiyiReward: not hibernating");
+
+        meta.hibernating = false;
+        meta.phase = MetabolismPhase.REGENERATION;
+        meta.effectiveMetabolicRate = meta.baseMetabolicRate;
+        meta.hibernationStart = 0;
+
+        emit HibernationExited(node, block.timestamp);
+        emit MetabolismUpdated(node, meta.effectiveMetabolicRate, MetabolismPhase.REGENERATION, block.timestamp);
+    }
+
+    /**
+     * @notice 再生：部分恢复代谢率
+     * @param node Agent节点地址
+     * @param amount 恢复量（0-10000）
+     */
+    function regenerate(address node, uint256 amount) external onlyValidator {
+        require(amount > 0 && amount <= 10000, "TaiyiReward: invalid amount");
+        MetabolismState storage meta = s_metabolism[node];
+        require(!meta.hibernating, "TaiyiReward: hibernating");
+
+        // 恢复基础代谢率
+        uint256 recovery = (meta.baseMetabolicRate * amount) / 10000;
+        meta.baseMetabolicRate += recovery;
+        if (meta.baseMetabolicRate > 10000) {
+            meta.baseMetabolicRate = 10000;
+        }
+        meta.effectiveMetabolicRate = meta.baseMetabolicRate;
+        meta.regenerationCount++;
+
+        // 再生后回到稳定期
+        meta.phase = MetabolismPhase.STABLE;
+
+        emit RegenerationCompleted(node, meta.regenerationCount, meta.baseMetabolicRate, block.timestamp);
+        emit MetabolismUpdated(node, meta.effectiveMetabolicRate, MetabolismPhase.STABLE, block.timestamp);
+    }
+
+    /**
+     * @notice 计算Agent当前代谢率（纯view函数）
+     * @param node Agent节点地址
+     * @return 有效代谢率
+     */
+    function calculateMetabolicRate(address node) external view returns (uint256) {
+        return s_metabolism[node].effectiveMetabolicRate;
+    }
+
+    /**
+     * @notice 获取Agent新陈代谢状态
+     * @param node Agent节点地址
+     */
+    function getMetabolismState(address node) external view returns (
+        uint256 baseMetabolicRate,
+        uint256 effectiveMetabolicRate,
+        uint256 age,
+        uint256 agingRate,
+        bool hibernating,
+        uint256 hibernationStart,
+        uint256 regenerationCount,
+        uint256 lastActivityEpoch,
+        MetabolismPhase phase
+    ) {
+        MetabolismState storage meta = s_metabolism[node];
+        return (
+            meta.baseMetabolicRate,
+            meta.effectiveMetabolicRate,
+            meta.age,
+            meta.agingRate,
+            meta.hibernating,
+            meta.hibernationStart,
+            meta.regenerationCount,
+            meta.lastActivityEpoch,
+            meta.phase
+        );
     }
 }
 

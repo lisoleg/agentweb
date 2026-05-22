@@ -1,180 +1,124 @@
-%% ═══ 4.1 模型部署流程 (deployModel) ═══
 sequenceDiagram
-    actor User
-    participant API as Brainwave API
-    participant Svc as BrainwaveService
-    participant Facade as BrainwaveFacade
-    participant SM as SegmentMapper
-    participant QE as QuantizationEngine
-    participant SRAM as SRAMPoolAdapter
-    participant PR as PartialReconfigurator
-    participant PFM as PhiFieldMapper
-    participant DMT as DualMappingTable
+    participant Proposer as 提案者
+    participant Constitution as Constitution.sol
+    participant SubDAO as SubDAO.sol
+    participant PhiStaking as PhiStaking.sol
+    participant Voter as 投票者
 
-    User->>API: POST /brainwave/deploy {modelDescriptor}
-    API->>Svc: deployModelAPI(req)
-    Svc->>Facade: deployModel(modelDescriptor)
-    
-    rect rgb(240, 248, 255)
-        Note over Facade,SM: P0-3: 模型分段
-        Facade->>SM: analyzeModel(modelDescriptor)
-        SM-->>Facade: segments[]
+    Proposer->>Constitution: proposeAmendment(clauseId, newContent, newContentHash)
+    Note over Constitution: 验证条款存在且非核心条款<br/>创建Amendment(状态=DISCUSSION)
+    Constitution-->>Proposer: amendmentId
+
+    Note over Constitution: 讨论期开始 (默认7天)
+
+    alt 讨论期结束
+        Constitution->>Constitution: 自动进入VOTING阶段
     end
 
-    rect rgb(255, 248, 240)
-        Note over Facade,QE: P0-2: 量化编码
-        loop 每个segment
-            Facade->>QE: findOptimalVariant(segment)
-            QE-->>Facade: recommendedFormat
-            Facade->>QE: batchEncode(phiValues, format)
-            QE-->>Facade: encodedBits[]
-        end
+    loop 投票期
+        Voter->>Constitution: voteOnAmendment(amendmentId, support)
+        Constitution->>PhiStaking: getVotingPower(voter)
+        PhiStaking-->>Constitution: votingPower
+        Note over Constitution: 累计赞成/反对票(Φ加权)
     end
 
-    rect rgb(240, 255, 240)
-        Note over Facade,SRAM: P0-1: SRAM分配
-        loop 每个segment
-            Facade->>SRAM: allocateForExcitation(excitation)
-            SRAM->>PFM: mapExcitationToPRR(excitation)
-            PFM-->>SRAM: mappedPRR
-            SRAM-->>Facade: sramBank
-        end
+    Proposer->>Constitution: finalizeAmendment(amendmentId)
+    Note over Constitution: 检查: forVotes / totalVotingPower >= amendmentApprovalThreshold (67%)
+
+    alt 通过
+        Constitution->>Constitution: 更新Clause内容<br/>Amendment.state = PASSED
+    else 未通过
+        Constitution->>Constitution: Amendment.state = FAILED
     end
 
-    rect rgb(255, 255, 240)
-        Note over Facade,PR: PRR重配置
-        Facade->>SM: optimizeSegmentPlacement(segments, prrs)
-        SM->>PR: segmentAwareReconfigure(segments)
-        PR-->>SM: reconfigStatus
-        SM-->>Facade: placement
+    ---
+
+    participant Agent as AI Agent
+    participant Employer as 雇主
+    participant LaborMarket as AILaborMarket.sol
+    participant PhiNFT as PhiAgentNFT.sol
+    participant Review as AdversarialReview.sol
+
+    Agent->>LaborMarket: registerAgent(agentId, skills, minWage, maxHours)
+    LaborMarket->>PhiNFT: 验证agentId有效性
+    PhiNFT-->>LaborMarket: 有效
+    Note over LaborMarket: 创建AgentProfile
+
+    Employer->>LaborMarket: registerEmployer(description, requiredSkills)
+    Note over LaborMarket: 创建EmployerProfile
+
+    Employer->>LaborMarket: createOrder(employer, agent, desc, wage, duration, termsHash)
+    Note over LaborMarket: 创建LaborOrder(状态=OPEN)
+
+    Agent->>LaborMarket: confirmOrder(orderId)
+    Note over LaborMarket: 状态→CONFIRMED
+
+    LaborMarket->>LaborMarket: 状态→IN_PROGRESS
+
+    alt 正常完成
+        Agent->>LaborMarket: completeOrder(orderId, agentScore, employerScore)
+        Note over LaborMarket: 状态→COMPLETED<br/>双方互评
+    else 发生争议
+        Agent->>LaborMarket: fileDispute(orderId, reason)
+        Note over LaborMarket: 状态→DISPUTED<br/>创建Dispute
+        LaborMarket->>Review: submitLaborDispute(orderId, plaintiff, defendant, reason)
+        Review-->>LaborMarket: reviewSessionId
+        Note over Review: 三方互审流程...
+        Review->>LaborMarket: 回调争议结果
+        LaborMarket->>LaborMarket: resolveDispute(disputeId, resolution)
     end
 
-    rect rgb(248, 240, 255)
-        Note over Facade,DMT: 对偶映射注册
-        loop 每组对偶关系
-            Facade->>DMT: registerMapping(entry)
-        end
+    ---
+
+    participant Keeper as Keeper/定时任务
+    participant TaiyiReward as TaiyiReward.sol
+    participant Metabolism as MetabolismState
+
+    Note over Metabolism: 初始状态: GROWTH<br/>baseMetabolicRate=100
+
+    Keeper->>TaiyiReward: updateMetabolism(node, activity)
+    Note over TaiyiReward: 计算effectiveMetabolicRate<br/>= baseRate × (1 + activity × 0.1)<br/>更新age += agingRate
+
+    alt age < growthThreshold
+        Note over Metabolism: phase = GROWTH<br/>baseMetabolicRate递增
+    else age < stableThreshold
+        Note over Metabolism: phase = STABLE<br/>baseMetabolicRate稳定
+    else age >= agingThreshold
+        Note over Metabolism: phase = AGING<br/>baseMetabolicRate递减
     end
 
-    Facade-->>Svc: DeploymentResult
-    Svc->>API: Response {code, data, message}
-    API-->>User: 201 {deploymentId, mappings[], status}
-
-%% ═══ 4.2 推理执行流程 (executeInference) ═══
-sequenceDiagram
-    actor User
-    participant API as Brainwave API
-    participant Svc as BrainwaveService
-    participant Facade as BrainwaveFacade
-    participant NPU as NPUSoftCore
-    participant SIMD as SimdUnit
-    participant GS as GSphereScheduler
-    participant QE as QuantizationEngine
-    participant SRAM as SRAMPoolAdapter
-    participant PV as PrecisionVerifier
-
-    User->>API: POST /brainwave/infer {deploymentId, input}
-    API->>Svc: executeInferenceAPI(req)
-    Svc->>Facade: executeInference(inputTensor)
-
-    rect rgb(240, 248, 255)
-        Note over Facade,QE: 输入量化
-        Facade->>QE: encodeEMLToMSFP(inputPhi, fp8)
-        QE-->>Facade: encodedInput
+    Note over TaiyiReward: 检查生存焦虑状态
+    alt 连续无收入 >= hibernationThreshold
+        Keeper->>TaiyiReward: enterHibernation(node)
+        Note over Metabolism: phase = HIBERNATION<br/>effectiveMetabolicRate = baseRate × 0.1<br/>节省资源消耗
     end
 
-    rect rgb(255, 248, 240)
-        Note over Facade,SRAM: 加载SRAM
-        Facade->>SRAM: syncFromPhiField(currentState)
-        SRAM-->>Facade: synced
+    alt 收入恢复 + 在冬眠中
+        Keeper->>TaiyiReward: exitHibernation(node)
+        Note over Metabolism: phase = REGENERATION
     end
 
-    rect rgb(240, 255, 240)
-        Note over Facade,SIMD: NPU执行
-        Facade->>NPU: loadInstructions(instructions)
-        Facade->>NPU: execute()
-        loop 每条NPU指令
-            NPU->>SIMD: executeLane(data, opcode)
-            SIMD-->>NPU: laneResult
-        end
-        NPU->>GS: registerNPUInstructions(pending)
-        GS-->>NPU: evolutionSyncAck
-        NPU-->>Facade: executionResult
+    alt 再生
+        Keeper->>TaiyiReward: regenerate(node, amount)
+        Note over Metabolism: phase = REGENERATION<br/>baseMetabolicRate部分恢复<br/>regenerationCount++
     end
 
-    rect rgb(255, 255, 240)
-        Note over Facade,QE: 输出反量化
-        Facade->>QE: decodeMSFPToEML(outputBits, fp8)
-        QE-->>Facade: decodedPhi
+    ---
+
+    participant User as 用户
+    participant PhiNFT2 as PhiAgentNFT.sol
+    participant NCB as NegativeCaseBook.sol
+
+    User->>PhiNFT2: register(agentURI)
+    Note over PhiNFT2: 铸造NFT + 创建AgentMeta
+
+    PhiNFT2->>NCB: mandatoryLearnAll(msg.sender)
+    Note over NCB: 获取所有mandatoryCases列表
+
+    loop 遍历每个必读案例
+        NCB->>NCB: confirmLearning(caseId, agent)
+        Note over NCB: s_agentLearned[caseId][agent] = true
     end
 
-    rect rgb(248, 240, 255)
-        Note over Facade,PV: 精度验证
-        Facade->>PV: verifyInference(input, output, baseline)
-        PV->>PV: detectPrecisionDrift()
-        alt drift detected
-            PV->>PV: computeCompensation(drift)
-            PV-->>Facade: {verified: false, compensation}
-        else no drift
-            PV-->>Facade: {verified: true}
-        end
-    end
-
-    Facade-->>Svc: InferenceResult
-    Svc-->>API: Response
-    API-->>User: 200 {output, verification, latency}
-
-%% ═══ 4.3 Catapult资源调度流程 (fuseWithLiuRouting) ═══
-sequenceDiagram
-    participant Facade as BrainwaveFacade
-    participant CA as CatapultAdapter
-    participant Bridge as TaiyiFPGABridge
-    participant DMT as DualMappingTable
-
-    Facade->>CA: allocateResources(requirement)
-    CA->>CA: getPoolStatus()
-
-    alt Catapult池有充足资源
-        CA->>CA: selectOptimalNode(requirement)
-        CA-->>Facade: allocation
-    else 需要外部FPGA节点
-        CA->>Bridge: selectWithCatapult(requirement)
-        Bridge->>Bridge: Liu三因子评分: load×0.3 + phiFit×0.3 + (1-entropy)×0.4
-        Bridge-->>CA: selectedNodeId
-        CA-->>Facade: allocation
-    end
-
-    Facade->>DMT: registerMapping({Catapult:resourceId ↔ LiuRoute:nodeId, P1_2})
-    DMT-->>Facade: mappingId
-
-%% ═══ 4.4 初始化流程 (BrainwaveFacade.initialize) ═══
-sequenceDiagram
-    participant App as Application
-    participant Facade as BrainwaveFacade
-    participant DMT as DualMappingTable
-    participant SRAM as SRAMPoolAdapter
-    participant QE as QuantizationEngine
-    participant NPU as NPUSoftCore
-    participant CA as CatapultAdapter
-    participant PV as PrecisionVerifier
-
-    App->>Facade: initialize()
-
-    Facade->>DMT: registerMapping(P0-1: SRAM↔Φ)
-    Facade->>DMT: registerMapping(P0-2: MSFP↔EML)
-    Facade->>DMT: registerMapping(P0-3: Segment↔PRR)
-    Facade->>DMT: registerMapping(P1-1: NPU↔G-Sphere)
-    Facade->>DMT: registerMapping(P1-2: Catapult↔Liu)
-    Facade->>DMT: registerMapping(P1-3: Verify↔Evolve)
-
-    Facade->>QE: registerFormat(MS_FP8: {1,5,2,bias=15})
-    Facade->>QE: registerFormat(MS_FP9: {1,5,3,bias=15})
-
-    Facade->>SRAM: initialize(defaultSRAMConfig)
-    Facade->>NPU: registerSimdUnit(defaultSimdUnit)
-    Facade->>CA: registerResource(defaultCatapultResources)
-
-    Facade->>DMT: validateAllMappings()
-    DMT-->>Facade: validationResults[]
-
-    Facade-->>App: initialized
+    NCB-->>PhiNFT2: learnedCount
+    Note over PhiNFT2: 注册成功(需学习完所有必读案例)

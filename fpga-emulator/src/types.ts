@@ -749,6 +749,137 @@ export interface NegativeCase {
   resolved: boolean;
 }
 
+// =============== V10.0 Constitution & Governance Types ===============
+
+// --- V10.0-1: Constitution ---
+export type AmendmentState = 'DISCUSSION' | 'VOTING' | 'PASSED' | 'FAILED';
+
+export interface Clause {
+  clauseId: number;
+  title: string;
+  content: string;
+  isCore: boolean;
+  createdAt: number;
+  active: boolean;
+}
+
+export interface Amendment {
+  amendmentId: number;
+  targetClauseId: number;
+  title: string;
+  description: string;
+  proposedContent: string;
+  proposer: string;
+  state: AmendmentState;
+  discussionStart: number;
+  votingStart: number;
+  votingEnd: number;
+  yesVotes: string;
+  noVotes: string;
+  totalVoters: number;
+}
+
+// --- V10.0-2: NegativeCaseBook (Enhanced) ---
+export type CaseCategory = 'HALLUCINATION' | 'SAFETY_VIOLATION' | 'DATA_LEAK' | 'PERFORMANCE_DEGRADATION' | 'MISALIGNMENT' | 'RESOURCE_ABUSE' | 'OTHER';
+
+export interface NegativeCaseV10 {
+  caseId: number;
+  title: string;
+  description: string;
+  category: CaseCategory;
+  severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  evidenceHash: string;
+  recorder: string;
+  timestamp: number;
+  isMandatory: boolean;
+  softDeleted: boolean;
+  confirmCount: number;
+}
+
+// --- V10.0-3: AI Labor Market ---
+export type OrderStatus = 'OPEN' | 'CONFIRMED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED' | 'DISPUTED';
+export type DisputeStatus = 'FILED' | 'UNDER_REVIEW' | 'RESOLVED_AGENT' | 'RESOLVED_EMPLOYER' | 'RESOLVED_SPLIT';
+
+export interface AgentLaborProfile {
+  agent: string;
+  skillHash: string;
+  minHourlyRate: string;
+  maxHoursPerWeek: number;
+  totalJobsCompleted: number;
+  totalEarnings: string;
+  rating: number;           // 0-10000
+  isActive: boolean;
+  registeredAt: number;
+}
+
+export interface EmployerProfile {
+  employer: string;
+  metadataURI: string;
+  totalJobsPosted: number;
+  totalSpent: string;
+  rating: number;           // 0-10000
+  isActive: boolean;
+  registeredAt: number;
+}
+
+export interface LaborOrder {
+  orderId: number;
+  employer: string;
+  agent: string;
+  description: string;
+  requirementsHash: string;
+  budget: string;
+  hourlyRate: string;
+  estimatedHours: number;
+  maxHours: number;
+  deadline: number;
+  status: OrderStatus;
+  createdAt: number;
+  confirmedAt: number;
+  completedAt: number;
+}
+
+export interface LaborDispute {
+  disputeId: number;
+  orderId: number;
+  filer: string;
+  reason: string;
+  status: DisputeStatus;
+  createdAt: number;
+  resolvedAt: number;
+}
+
+// --- V10.0-4: Metabolism ---
+export type MetabolismPhase = 'GROWTH' | 'STABLE' | 'AGING' | 'HIBERNATION' | 'REGENERATION';
+
+export interface MetabolismState {
+  baseMetabolicRate: number;      // 0-10000
+  effectiveMetabolicRate: number; // 0-10000
+  age: number;                    // epoch数
+  agingRate: number;              // 基点/epoch
+  hibernating: boolean;
+  hibernationStart: number;
+  regenerationCount: number;
+  lastActivityEpoch: number;
+  phase: MetabolismPhase;
+}
+
+// --- V10.0-5: PhiStaking Evolution Proposal ---
+export type EvolutionState = 'PROPOSED' | 'VOTING' | 'EXECUTED' | 'REJECTED' | 'EXPIRED';
+
+export interface EvolutionProposal {
+  proposalId: number;
+  proposer: string;
+  title: string;
+  description: string;
+  executionData: string;
+  votingStart: number;
+  votingEnd: number;
+  yesVotes: string;
+  noVotes: string;
+  state: EvolutionState;
+}
+
 // --- V9.0 Phi Dynamic Pricing ---
 export type EconomyPricingTier = 'FREE' | 'DISCOUNT' | 'STANDARD' | 'PREMIUM';
 

@@ -1,249 +1,307 @@
 classDiagram
     direction TB
 
-    %% ═══ P0-1: SRAM 池化 ↔ Φ 场全息存储 ═══
-    class SRAMPoolConfig {
-        +number totalSizeMB
-        +number bankCount
-        +number bankSizeKB
-        +SRAMBank[] banks
+    class Constitution {
+        <<contract>>
+        -uint256 nextClauseId
+        -uint256 nextAmendmentId
+        -mapping uint256~Clause~ s_clauses
+        -mapping uint256~Amendment~ s_amendments
+        -mapping bytes32~bool~ s_coreClauseHashes
+        -address circuitBreaker
+        -address phiStaking
+        -address subDAO
+        -uint256 amendmentApprovalThreshold
+        -uint256 emergencyPauseThreshold
+        -uint256 discussionPeriodSeconds
+        +clauseCount() uint256
+        +addCoreClause(string title, string content, bytes32 contentHash) uint256
+        +addAmendableClause(string title, string content, bytes32 contentHash) uint256
+        +proposeAmendment(uint256 clauseId, string newContent, bytes32 newContentHash) uint256
+        +voteOnAmendment(uint256 amendmentId, bool support)
+        +finalizeAmendment(uint256 amendmentId) bool
+        +emergencyPause(string reason)
+        +emergencyUnpause(string reason)
+        +getClause(uint256 clauseId) Clause
+        +getAmendment(uint256 amendmentId) Amendment
+        +isCoreClause(uint256 clauseId) bool
+        +setCircuitBreaker(address cb)
+        +setPhiStaking(address ps)
+        +setAmendmentThreshold(uint256 threshold)
     }
 
-    class SRAMBank {
-        +string bankId
-        +number offset
-        +number sizeKB
-        +SRAMBankStatus status
-        +string[] mappedPhiExcitationIds
+    class Clause {
+        <<struct>>
+        +uint256 clauseId
+        +string title
+        +string content
+        +bytes32 contentHash
+        +bool isCore
+        +bool isActive
+        +uint256 createdAt
+        +uint256 updatedAt
     }
 
-    class SRAMPoolAdapter {
-        -SRAMPoolConfig config
-        -PhiFieldMapper phiMapper
-        -Map~string, SRAMBank~ allocationMap
-        +initialize(config: SRAMPoolConfig): void
-        +allocateForExcitation(excitation: PhiExcitation): SRAMBank
-        +releaseBank(bankId: string): void
-        +syncToPhiField(): PhiFieldState
-        +syncFromPhiField(state: PhiFieldState): void
-        +getHolographicReplica(bankId: string): Buffer
-        +reportUtilization(): SRAMUtilizationReport
+    class Amendment {
+        <<struct>>
+        +uint256 amendmentId
+        +uint256 targetClauseId
+        +address proposer
+        +string newContent
+        +bytes32 newContentHash
+        +uint256 forVotes
+        +uint256 againstVotes
+        +uint256 totalVotingPower
+        +uint256 discussionStart
+        +uint256 votingDeadline
+        +AmendmentState state
     }
 
-    SRAMPoolAdapter --> SRAMPoolConfig : uses
-    SRAMPoolAdapter --> PhiFieldMapper : delegates
-    SRAMBank --> SRAMPoolConfig : contained
-
-    %% ═══ P0-2: ms-fp8/9 量化引擎 ═══
-    class MSFPFormat {
-        +FPVariant variant
-        +number signBits
-        +number exponentBits
-        +number mantissaBits
-        +number bias
+    class AmendmentState {
+        <<enum>>
+        DISCUSSION
+        VOTING
+        PASSED
+        FAILED
+        EXPIRED
     }
 
-    class EMLPhiValue {
-        +number magnitude
-        +number phaseAngle
-        +toComplex(): {re: number, im: number}
-        +fromComplex(re: number, im: number): EMLPhiValue
+    class NegativeCaseBook {
+        <<contract>>
+        -uint256 nextCaseId
+        -mapping uint256~NegativeCase~ s_cases
+        -mapping bytes32~uint256[]~ s_categoryIndex
+        -mapping uint256~mapping address~bool~~ s_agentLearned
+        -mapping address~uint256~ s_agentMandatoryProgress
+        -uint256 mandatoryCaseCount
+        -address phiAgentNFT
+        +recordCase(string title, string description, bytes32 category, uint8 severity, bytes32 evidenceHash) uint256
+        +markMandatory(uint256 caseId)
+        +unmarkMandatory(uint256 caseId)
+        +confirmLearning(uint256 caseId, address agent)
+        +mandatoryLearnAll(address agent) uint256
+        +softDelete(uint256 caseId)
+        +getCase(uint256 caseId) NegativeCase
+        +getCasesByCategory(bytes32 category) uint256[]
+        +getMandatoryCases() uint256[]
+        +hasAgentLearned(uint256 caseId, address agent) bool
+        +getAgentProgress(address agent) uint256 uint256
+        +searchCases(string query, bytes32 category) uint256[]
     }
 
-    class QuantizationEngine {
-        -Map~FPVariant, MSFPFormat~ formatRegistry
-        -decimal.js.Decimal precision
-        +registerFormat(format: MSFPFormat): void
-        +encodeEMLToMSFP(phi: EMLPhiValue, variant: FPVariant): BigInt
-        +decodeMSFPToEML(bits: BigInt, variant: FPVariant): EMLPhiValue
-        +batchEncode(phis: EMLPhiValue[], variant: FPVariant): BigInt[]
-        +batchDecode(bitsArray: BigInt[], variant: FPVariant): EMLPhiValue[]
-        +quantizationError(phi: EMLPhiValue, variant: FPVariant): number
-        +findOptimalVariant(phi: EMLPhiValue): FPVariant
+    class NegativeCase {
+        <<struct>>
+        +uint256 caseId
+        +string title
+        +string description
+        +bytes32 category
+        +uint8 severity
+        +bytes32 evidenceHash
+        +address recorder
+        +bool isMandatory
+        +bool softDeleted
+        +uint256 timestamp
     }
 
-    QuantizationEngine --> MSFPFormat : manages
-    QuantizationEngine --> EMLPhiValue : converts
-
-    %% ═══ P0-3: 模型分段映射 ═══
-    class ModelSegment {
-        +string segmentId
-        +number layerIndex
-        +number paramCount
-        +number computeCost
-        +string targetPRRId
-        +MSFPFormat quantFormat
+    class AILaborMarket {
+        <<contract>>
+        -uint256 nextOrderId
+        -uint256 nextDisputeId
+        -mapping uint256~LaborOrder~ s_orders
+        -mapping address~AgentLaborProfile~ s_agentProfiles
+        -mapping address~EmployerProfile~ s_employerProfiles
+        -mapping uint256~LaborDispute~ s_disputes
+        -address adversarialReview
+        -address phiAgentNFT
+        -address constitution
+        +registerAgent(uint256 agentId, string[] skills, uint256 minWage, uint256 maxHours)
+        +registerEmployer(string description, string[] requiredSkills)
+        +createOrder(address employer, address agent, string description, uint256 wage, uint256 duration, bytes32 termsHash) uint256
+        +confirmOrder(uint256 orderId)
+        +completeOrder(uint256 orderId, uint8 agentScore, uint8 employerScore)
+        +cancelOrder(uint256 orderId, string reason)
+        +fileDispute(uint256 orderId, string reason) uint256
+        +resolveDispute(uint256 disputeId, uint8 resolution)
+        +getOrder(uint256 orderId) LaborOrder
+        +getAgentProfile(address agent) AgentLaborProfile
+        +getDispute(uint256 disputeId) LaborDispute
+        +findMatchingAgents(string[] skills, uint256 maxWage) address[]
     }
 
-    class SegmentMapper {
-        -PartialReconfigurator reconfigurator
-        -QuantizationEngine quantEngine
-        +analyzeModel(modelDescriptor: DNNModelDescriptor): ModelSegment[]
-        +mapSegmentToPRR(segment: ModelSegment, prr: PRR): PRRMappingResult
-        +optimizeSegmentPlacement(segments: ModelSegment[], prrs: PRR[]): SegmentPlacement
-        +generateBitstreamSegment(segment: ModelSegment): Buffer
-        +validateMapping(segments: ModelSegment[]): ValidationResult
+    class LaborOrder {
+        <<struct>>
+        +uint256 orderId
+        +address employer
+        +address agent
+        +string description
+        +uint256 wage
+        +uint256 duration
+        +bytes32 termsHash
+        +OrderStatus status
+        +uint8 agentScore
+        +uint8 employerScore
+        +uint256 createdAt
+        +uint256 completedAt
     }
 
-    SegmentMapper --> ModelSegment : manages
-    SegmentMapper --> PartialReconfigurator : delegates
-    SegmentMapper --> QuantizationEngine : uses
-
-    %% ═══ P1-1: NPU 软核 ═══
-    class NPUInstruction {
-        +NPUOpcode opcode
-        +number[] operands
-        +MSFPFormat dataFormat
+    class OrderStatus {
+        <<enum>>
+        OPEN
+        CONFIRMED
+        IN_PROGRESS
+        COMPLETED
+        CANCELLED
+        DISPUTED
     }
 
-    class NPUSoftCore {
-        -NPUInstruction[] instructionBuffer
-        -Map~string, SimdUnit~ simdUnits
-        -GSphereScheduler scheduler
-        +loadInstructions(instructions: NPUInstruction[]): void
-        +execute(): NPUExecutionResult
-        +registerSimdUnit(unit: SimdUnit): void
-        +batchMatMul(a: Matrix, b: Matrix, format: MSFPFormat): Matrix
-        +reduceSum(tensor: Tensor, axis: number): Tensor
-        +activate(input: Tensor, fn: ActivationFn): Tensor
+    class AgentLaborProfile {
+        <<struct>>
+        +address agent
+        +uint256 agentId
+        +string[] skills
+        +uint256 minWage
+        +uint256 maxHours
+        +uint256 completedJobs
+        +uint256 totalEarnings
+        +uint256 avgRating
+        +bool isActive
     }
 
-    class SimdUnit {
-        +string unitId
-        +number laneCount
-        +MSFPFormat supportedFormat
-        +executeLane(data: number[], opcode: NPUOpcode): number[]
+    class EmployerProfile {
+        <<struct>>
+        +address employer
+        +string description
+        +string[] requiredSkills
+        +uint256 completedJobs
+        +uint256 totalSpent
+        +uint256 avgRating
+        +bool isActive
     }
 
-    NPUSoftCore --> NPUInstruction : executes
-    NPUSoftCore --> SimdUnit : orchestrates
-    NPUSoftCore --> GSphereScheduler : integrates with
-
-    %% ═══ P1-2: Catapult 资源池适配器 ═══
-    class CatapultResource {
-        +string resourceId
-        +CatapultResourceType resourceType
-        +number capacity
-        +number utilized
-        +string nodeId
+    class LaborDispute {
+        <<struct>>
+        +uint256 disputeId
+        +uint256 orderId
+        +address plaintiff
+        +address defendant
+        +string reason
+        +DisputeStatus status
+        +uint256 reviewSessionId
+        +uint8 resolution
+        +uint256 timestamp
     }
 
-    class CatapultAdapter {
-        -TaiyiFPGAClient bridgeClient
-        -Map~string, CatapultResource~ resourcePool
-        +registerResource(resource: CatapultResource): void
-        +selectOptimalNode(requirements: ResourceRequirement): string
-        +allocateResources(requirements: ResourceRequirement): CatapultAllocation
-        +releaseResources(allocationId: string): void
-        +getPoolStatus(): CatapultPoolStatus
-        +fuseWithLiuRouting(requirement: ResourceRequirement): string
+    class DisputeStatus {
+        <<enum>>
+        FILED
+        UNDER_REVIEW
+        RESOLVED_FAVOR_PLAINTIFF
+        RESOLVED_FAVOR_DEFENDANT
+        RESOLVED_COMPROMISE
     }
 
-    CatapultAdapter --> CatapultResource : manages
-    CatapultAdapter --> TaiyiFPGAClient : delegates routing
-
-    %% ═══ P1-3: 精度验证 + 重训练补偿 ═══
-    class PrecisionVerifier {
-        -QuantizationEngine quantEngine
-        -EvolvableHardware evolvableHW
-        +verifyInference(input: Tensor, output: Tensor, baseline: Tensor): VerificationResult
-        +detectPrecisionDrift(outputs: Tensor[], baseline: Tensor[]): DriftReport
-        +computeCompensation(drift: DriftReport): CompensationParams
-        +applyRetraining(params: CompensationParams): void
-        +runVerificationPipeline(): VerificationPipelineResult
+    class PhiAgentNFT {
+        <<contract - MODIFIED>>
+        ...existing code...
+        -address negativeCaseBook
+        +setNegativeCaseBook(address ncb)
+        +register(string agentURI) uint256
     }
 
-    PrecisionVerifier --> QuantizationEngine : uses
-    PrecisionVerifier --> EvolvableHardware : delegates evolution
-
-    %% ═══ 对偶映射表 ═══
-    class DualMappingEntry {
-        +string mappingId
-        +string brainwaveSide
-        +string sigmaCloudSide
-        +DualMappingCategory category
-        +BidirectionalConverter converter
+    class TaiyiReward {
+        <<contract - MODIFIED>>
+        ...existing V9.0 code...
+        -mapping address~MetabolismState~ s_metabolism
+        +updateMetabolism(address node, uint256 activity)
+        +enterHibernation(address node)
+        +exitHibernation(address node)
+        +regenerate(address node, uint256 amount)
+        +getMetabolismState(address node) MetabolismState
+        +calculateMetabolicRate(address node) uint256
     }
 
-    class DualMappingTable {
-        -Map~string, DualMappingEntry~ entries
-        +registerMapping(entry: DualMappingEntry): void
-        +lookupByBrainwave(key: string): DualMappingEntry
-        +lookupBySigmaCloud(key: string): DualMappingEntry
-        +convertToBrainwave(sigmaData: any): any
-        +convertToSigmaCloud(brainwaveData: any): any
-        +validateAllMappings(): ValidationResult[]
+    class MetabolismState {
+        <<struct>>
+        +uint256 baseMetabolicRate
+        +uint256 effectiveMetabolicRate
+        +uint256 age
+        +uint256 agingRate
+        +bool hibernating
+        +uint256 hibernationStart
+        +uint256 regenerationCount
+        +uint256 lastActivityEpoch
+        +MetabolismPhase phase
     }
 
-    DualMappingTable --> DualMappingEntry : manages
-
-    %% ═══ Brainwave 门面 ═══
-    class BrainwaveFacade {
-        -SRAMPoolAdapter sramAdapter
-        -QuantizationEngine quantEngine
-        -SegmentMapper segmentMapper
-        -NPUSoftCore npuCore
-        -CatapultAdapter catapultAdapter
-        -PrecisionVerifier verifier
-        -DualMappingTable mappingTable
-        +initialize(): void
-        +deployModel(model: DNNModelDescriptor): DeploymentResult
-        +executeInference(input: Tensor): InferenceResult
-        +reconfigureMapping(mappingId: string): void
-        +getSystemStatus(): BrainwaveSystemStatus
-        +shutdown(): void
+    class MetabolismPhase {
+        <<enum>>
+        GROWTH
+        STABLE
+        AGING
+        HIBERNATION
+        REGENERATION
     }
 
-    BrainwaveFacade --> SRAMPoolAdapter : P0-1
-    BrainwaveFacade --> QuantizationEngine : P0-2
-    BrainwaveFacade --> SegmentMapper : P0-3
-    BrainwaveFacade --> NPUSoftCore : P1-1
-    BrainwaveFacade --> CatapultAdapter : P1-2
-    BrainwaveFacade --> PrecisionVerifier : P1-3
-    BrainwaveFacade --> DualMappingTable : config
-
-    %% ═══ 后端服务 ═══
-    class BrainwaveService {
-        -BrainwaveFacade facade
-        -BullMQ.Queue taskQueue
-        -Socket.IO.Server io
-        +deployModelAPI(req: Request): Promise~Response~
-        +executeInferenceAPI(req: Request): Promise~Response~
-        +getMappingStatus(req: Request): Promise~Response~
-        +streamStatus(socket: Socket): void
+    class PhiStaking {
+        <<contract - MODIFIED>>
+        ...existing V9.0 code...
+        -address constitution
+        -mapping uint256~EvolutionProposal~ s_evolutionProposals
+        +proposeEvolution(string description, bytes calldata_) uint256
+        +voteOnEvolution(uint256 proposalId, bool support)
+        +executeEvolution(uint256 proposalId)
+        +setConstitution(address constitution)
     }
 
-    BrainwaveService --> BrainwaveFacade : orchestrates
-
-    %% ═══ 已有类（扩展标记） ═══
-    class PhiFieldMapper {
-        +mapExcitationToPRR() PRR
-        +mapBitstreamToExcitation() PhiExcitation
-        +calculateWindingNumber() number
-        +detectTopologicalTransition() boolean
-        +encodePhiToMSFP(phi: EMLPhiValue, variant: FPVariant): BigInt
-        +decodeMSFPToPhi(bits: BigInt, variant: FPVariant): EMLPhiValue
+    class EvolutionProposal {
+        <<struct>>
+        +uint256 proposalId
+        +address proposer
+        +string description
+        +bytes calldata_
+        +uint256 forVotes
+        +uint256 againstVotes
+        +EvolutionState state
+        +uint256 createdAt
     }
 
-    class GSphereScheduler {
-        +addSphere() void
-        +evolve() ClusterState
-        +syncFromPhiField() void
-        +registerNPUInstructions(instructions: NPUInstruction[]): void
-        +executeNPUOnSphere(sphereId: string, opcode: NPUOpcode): NPUExecutionResult
+    class EvolutionState {
+        <<enum>>
+        PROPOSED
+        CONSTITUTION_CHECK
+        VOTING
+        PASSED
+        FAILED
+        EXECUTED
     }
 
-    class PartialReconfigurator {
-        +definePRR() void
-        +reconfigure() ReconfigurationStatus
-        +mapSegmentToPRR(segment: ModelSegment): PRRMappingResult
-        +segmentAwareReconfigure(segments: ModelSegment[]): ReconfigurationStatus
+    class CircuitBreaker {
+        <<contract - MODIFIED>>
+        ...existing V9.0 code...
+        -address constitution
+        +constitutionEmergencyBreak(uint256 agentId, string reason)
+        +setConstitution(address constitution)
     }
 
-    class TaiyiFPGAClient {
-        +registerNode() void
-        +selectOptimalNode() string
-        +submitPhiTask() TaskResult
-        +selectWithCatapult(req: ResourceRequirement): string
-        +getCatapultPoolStatus(): CatapultPoolStatus
+    class AdversarialReview {
+        <<contract - MODIFIED>>
+        ...existing V9.0 code...
+        +submitLaborDispute(uint256 orderId, address plaintiff, address defendant, string reason) uint256
     }
+
+    Constitution "1" --> "*" Clause : 管理
+    Constitution "1" --> "*" Amendment : 管理
+    Constitution --> CircuitBreaker : 紧急暂停触发
+    Constitution --> PhiStaking : 进化提案校验
+    NegativeCaseBook "1" --> "*" NegativeCase : 管理
+    NegativeCaseBook --> PhiAgentNFT : 强制学习钩子
+    PhiAgentNFT --> NegativeCaseBook : register时调用
+    AILaborMarket "1" --> "*" LaborOrder : 管理
+    AILaborMarket "1" --> "*" LaborDispute : 管理
+    AILaborMarket --> AdversarialReview : 争议对接
+    AILaborMarket --> Constitution : 劳动保护条款引用
+    AILaborMarket --> PhiAgentNFT : Agent身份验证
+    TaiyiReward "1" --> "*" MetabolismState : 管理
+    PhiStaking "1" --> "*" EvolutionProposal : 管理
+    PhiStaking --> Constitution : 宪法校验
+    CircuitBreaker <-- Constitution : 被触发

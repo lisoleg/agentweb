@@ -20,6 +20,9 @@ import oracleRoutes from './oracle';  // V4.0: 太乙预言机路由
 import brainwaveRoutes from './brainwave';  // V5.0: Brainwave整合路由
 import economyRoutes from './economy';  // V9.0: GC经济路由
 import reviewRoutes from './review';  // V9.0: 互审路由
+import constitutionRoutes from './constitution';  // V10.0: 宪法治理路由
+import laborMarketRoutes from './labor-market';  // V10.0: AI劳动力市场路由
+import metabolismRoutes from './metabolism';  // V10.0: 新陈代谢路由
 import { hottTypeChecker } from '../services/hottTypeChecker';
 import { dualTrackRouter } from '../services/dualTrackRouter';  // V2.0: Dual-Track 双轨桥接器
 
@@ -32,8 +35,8 @@ router.use(phiGatewayMiddleware);
 router.get('/', (_req, res) => {
   res.json({
     name: 'AgentWeb API',
-    version: '9.0.0',  // V9.0: Survival Anxiety & Adversarial Review
-    description: 'AgentWeb 西格玛云 - Next-generation digital society infrastructure (Fediverse + Four-Token + IGCTR + SubDAO + Cross-Chain + Taiyi Oracle + Brainwave + Supernode Alignment + Agent Economy Settlement + Survival Anxiety + Adversarial Review)',
+    version: '10.0.0',  // V10.0: Constitution + NegativeCaseBook + AI Labor Market + Metabolism
+    description: 'AgentWeb 西格玛云 - Next-generation digital society infrastructure (Fediverse + Four-Token + IGCTR + SubDAO + Cross-Chain + Taiyi Oracle + Brainwave + Supernode Alignment + Agent Economy Settlement + Survival Anxiety + Adversarial Review + Constitution + AI Labor Market + Metabolism)',
     endpoints: {
       auth: '/api/v1/auth',
       did: '/api/v1/did',
@@ -57,10 +60,13 @@ router.get('/', (_req, res) => {
       phi402: '/api/v1/phi402',             // V8.0: Φ-402语义微支付
       phiMandate: '/api/v1/phi-mandate',    // V8.0: Φ-Mandate数字授权书
       economy: '/api/v1/economy',           // V9.0: GC经济闭环
-      review: '/api/v1/review'              // V9.0: 对抗互审+熔断
+      review: '/api/v1/review',              // V9.0: 对抗互审+熔断
+      constitution: '/api/v1/constitution', // V10.0: 宪法治理
+      laborMarket: '/api/v1/labor-market',  // V10.0: AI劳动力市场
+      metabolism: '/api/v1/metabolism'      // V10.0: 新陈代谢
     },
     documentation: process.env.ENABLE_SWAGGER === 'true' ? '/api-docs' : undefined,
-    versionNotes: 'V9.0: Survival Anxiety & Adversarial Review (GCCRental, AIResourceConsumption, Survival Tracking, AdversarialReview, CircuitBreaker)'
+    versionNotes: 'V10.0: Constitution + NegativeCaseBook + AI Labor Market + Metabolism (Constitution, NegativeCaseBook, AILaborMarket, Metabolism, PhiStaking Evolution)'
   });
 });
 
@@ -81,6 +87,9 @@ router.use('/oracle', oracleRoutes);    // V4.0: 太乙预言机
 router.use('/brainwave', brainwaveRoutes);  // V5.0: Brainwave整合
 router.use('/economy', economyRoutes);  // V9.0: GC经济闭环
 router.use('/review', reviewRoutes);    // V9.0: 对抗互审+熔断
+router.use('/constitution', constitutionRoutes);  // V10.0: 宪法治理
+router.use('/labor-market', laborMarketRoutes);    // V10.0: AI劳动力市场
+router.use('/metabolism', metabolismRoutes);        // V10.0: 新陈代谢
 
 // =============== HoTT Type Checker Route ===============
 router.get('/hott/types', (_req, res) => {
