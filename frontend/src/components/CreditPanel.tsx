@@ -9,7 +9,7 @@ import {
   Table, TableBody, TableCell, TableContainer, TableHead,
   TableRow, Paper, Button, TextField, Alert, LinearProgress,
 } from '@mui/material';
-import { apiClient } from '../services/api';
+import apiClient from '../services/api';
 
 interface CreditInfo {
   totalScore: number;

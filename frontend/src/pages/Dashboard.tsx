@@ -88,6 +88,12 @@ function Dashboard() {
           <a href="/news" className="action-btn">
             📰 News Feed
           </a>
+          <a href="/relay" className="action-btn">
+            🔀 Relay (V12)
+          </a>
+          <a href="/credit" className="action-btn">
+            🏆 Credit (V12)
+          </a>
         </div>
       </div>
 

@@ -10,7 +10,7 @@ import {
   Chip, Button, TextField, Select, MenuItem, FormControl,
   InputLabel, Grid, Alert, LinearProgress,
 } from '@mui/material';
-import { apiClient } from '../services/api';
+import apiClient from '../services/api';
 
 interface RelayNode {
   address: string;

@@ -10,6 +10,8 @@ import AgentWorkbench from './pages/AgentWorkbench';
 import Governance from './pages/Governance';
 import NewsFeed from './pages/NewsFeed';
 import CognitiveMonitor from './pages/CognitiveMonitor';
+import Relay from './pages/Relay';
+import Credit from './pages/Credit';
 import Login from './pages/Login';
 import { useAuth } from './hooks/useAuth';
 
@@ -82,6 +84,23 @@ function App() {
           element={
             <ProtectedRoute>
               <CognitiveMonitor />
+            </ProtectedRoute>
+          }
+        />
+        {/* V12.0 Routes */}
+        <Route
+          path="/relay"
+          element={
+            <ProtectedRoute>
+              <Relay />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/credit"
+          element={
+            <ProtectedRoute>
+              <Credit />
             </ProtectedRoute>
           }
         />

@@ -89,13 +89,15 @@ function Governance() {
 
       {/* Proposals Tab */}
       {activeTab === 'proposals' && (
-        <button
-          onClick={() => setShowCreate(!showCreate)}
-          className="primary-btn"
-        >
-          {showCreate ? 'Cancel' : 'Create Proposal'}
-        </button>
-      </div>
+        <div>
+          <button
+            onClick={() => setShowCreate(!showCreate)}
+            className="primary-btn"
+          >
+            {showCreate ? 'Cancel' : 'Create Proposal'}
+          </button>
+        </div>
+      )}
 
       {/* Create Proposal Form */}
       {showCreate && (
