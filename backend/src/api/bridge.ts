@@ -17,7 +17,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import logger from '../utils/logger';
 import { authMiddleware } from '../middleware/auth';
-import { crossChainBridgeService } from '../services/crossChainBridgeService';
+import { crossChainBridgeService, PassportData } from '../services/crossChainBridgeService';
 
 const router = Router();
 
@@ -50,6 +50,23 @@ const SignSchema = z.object({
 });
 
 const RefundSchema = z.object({
+  requestId: z.string().min(1),
+});
+
+// V11.0: Passport bridge schemas
+const LockWithPassportSchema = z.object({
+  targetChainId: z.number().positive(),
+  token: z.string().min(1),
+  amount: z.number().positive(),
+  passportData: z.object({
+    phiValue: z.number().min(0).max(10000),
+    creditScore: z.number().min(0).max(10000),
+    caseMerkleRoot: z.string().default(''),
+    lostCaseCount: z.number().min(0).default(0),
+  }),
+});
+
+const MarkMigratedSchema = z.object({
   requestId: z.string().min(1),
 });
 
@@ -287,6 +304,105 @@ router.get('/validators', async (_req: Request, res: Response, next: NextFunctio
         totalPhiWeight,
         signatureThreshold: '2/3',
       },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// =============== V11.0 Passport Bridge Routes ===============
+
+/**
+ * POST /api/v1/bridge/v2/lock
+ * V11.0: 锁定资产并携带Passport数据
+ */
+router.post('/v2/lock', authMiddleware, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const validated = LockWithPassportSchema.parse(req.body);
+    const userId = req.user?.userId;
+    if (!userId) {
+      res.status(401).json({ code: 3001, message: 'Unauthorized' });
+      return;
+    }
+
+    const migrationRequest = await crossChainBridgeService.lockWithPassport({
+      targetChainId: validated.targetChainId,
+      token: validated.token,
+      sender: userId,
+      amount: validated.amount,
+      passportData: validated.passportData as PassportData,
+    });
+
+    logger.info('BridgeV2 lock with passport', { requestId: migrationRequest.requestId, sender: userId });
+
+    res.status(201).json({
+      code: 0,
+      data: migrationRequest,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * POST /api/v1/bridge/v2/mint
+ * V11.0: 目标链铸造并应用Φ衰减
+ */
+router.post('/v2/mint', authMiddleware, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const validated = MintSchema.parse(req.body);
+
+    const migrationRequest = await crossChainBridgeService.mintWithPassport(validated.requestId);
+
+    logger.info('BridgeV2 mint with passport', { requestId: validated.requestId });
+
+    res.json({
+      code: 0,
+      data: migrationRequest,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * POST /api/v1/bridge/v2/migrate
+ * V11.0: 标记迁徙完成
+ */
+router.post('/v2/migrate', authMiddleware, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const validated = MarkMigratedSchema.parse(req.body);
+
+    const migrationRequest = crossChainBridgeService.markMigrated(validated.requestId);
+
+    logger.info('BridgeV2 migration completed', { requestId: validated.requestId });
+
+    res.json({
+      code: 0,
+      data: migrationRequest,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * GET /api/v1/bridge/v2/status/:requestId
+ * V11.0: 查询迁徙请求状态
+ */
+router.get('/v2/status/:requestId', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { requestId } = req.params;
+    const migrationRequest = crossChainBridgeService.getMigrationRequest(requestId);
+
+    if (!migrationRequest) {
+      res.status(404).json({ code: 1004, message: 'Migration request not found' });
+      return;
+    }
+
+    res.json({
+      code: 0,
+      data: migrationRequest,
     });
   } catch (error) {
     next(error);

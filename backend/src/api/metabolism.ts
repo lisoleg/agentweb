@@ -94,4 +94,41 @@ router.get('/:agent/rate', (req: Request, res: Response) => {
   res.json({ code: 0, data: { agent: req.params.agent, effectiveMetabolicRate: rate }, version: '10.0.0' });
 });
 
+// ── V11.0 冬眠唤醒路由 ──────────────────
+
+/**
+ * GET /api/v1/metabolism/:agent/wake-conditions
+ * V11.0: 检查Agent唤醒条件
+ */
+router.get('/:agent/wake-conditions', (req: Request, res: Response) => {
+  const conditions = metabolismService.checkWakeConditions(req.params.agent);
+  res.json({ code: 0, data: { agent: req.params.agent, conditions }, version: '11.0.0' });
+});
+
+/**
+ * POST /api/v1/metabolism/:agent/wake
+ * V11.0: 手动唤醒Agent
+ */
+router.post('/:agent/wake', (req: Request, res: Response) => {
+  try {
+    const result = metabolismService.wakeAgent(req.params.agent);
+    if (result.woken) {
+      res.json({ code: 0, data: { agent: req.params.agent, woken: true, reason: result.reason, state: result.state }, version: '11.0.0' });
+    } else {
+      res.status(400).json({ code: 1, message: result.reason, data: { agent: req.params.agent, woken: false }, version: '11.0.0' });
+    }
+  } catch (err: any) {
+    res.status(500).json({ code: 1, message: err.message });
+  }
+});
+
+/**
+ * GET /api/v1/metabolism/hibernating
+ * V11.0: 获取所有冬眠Agent列表
+ */
+router.get('/hibernating', (_req: Request, res: Response) => {
+  const agents = metabolismService.getHibernatingAgents();
+  res.json({ code: 0, data: { agents, count: agents.length }, version: '11.0.0' });
+});
+
 export default router;

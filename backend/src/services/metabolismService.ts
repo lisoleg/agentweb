@@ -154,6 +154,77 @@ class MetabolismServiceClass {
     }
     return state;
   }
+
+  // ── V11.0 冬眠唤醒方法 ──────────────────
+
+  /**
+   * V11.0: 检查Agent是否满足唤醒条件
+   * 返回4个条件的状态
+   */
+  checkWakeConditions(agent: string): {
+    phiThreshold: boolean;
+    timeout: boolean;
+    pendingOrders: boolean;
+    votingWeight: boolean;
+    canWake: boolean;
+  } {
+    const state = this.states.get(agent);
+    if (!state || !state.hibernating) {
+      return { phiThreshold: false, timeout: false, pendingOrders: false, votingWeight: false, canWake: false };
+    }
+
+    const phiThreshold = state.baseMetabolicRate >= 3000;
+
+    const thirtyDaysMs = 30 * 24 * 3600 * 1000;
+    const timeout = state.hibernationStart > 0 && (Date.now() - state.hibernationStart) >= thirtyDaysMs;
+
+    // Mock: assume no pending orders in memory-only mode
+    const pendingOrders = false;
+
+    // Mock: simplified voting weight check
+    const votingWeight = state.baseMetabolicRate >= 100;
+
+    const canWake = phiThreshold || timeout || pendingOrders || votingWeight;
+
+    return { phiThreshold, timeout, pendingOrders, votingWeight, canWake };
+  }
+
+  /**
+   * V11.0: 唤醒Agent
+   */
+  wakeAgent(agent: string): { woken: boolean; reason: string; state: MetabolismState | null } {
+    const conditions = this.checkWakeConditions(agent);
+    if (!conditions.canWake) {
+      return { woken: false, reason: 'No wakeup condition met', state: null };
+    }
+
+    let reason = '';
+    if (conditions.phiThreshold) reason = 'Phi threshold met';
+    else if (conditions.timeout) reason = 'Hibernation timeout';
+    else if (conditions.pendingOrders) reason = 'Pending labor orders';
+    else if (conditions.votingWeight) reason = 'Voting weight threshold';
+
+    try {
+      const state = this.exitHibernation(agent);
+      logger.info(`[MetabolismService] Agent ${agent} woken: ${reason}`);
+      return { woken: true, reason, state };
+    } catch (err: any) {
+      return { woken: false, reason: err.message, state: null };
+    }
+  }
+
+  /**
+   * V11.0: 获取所有冬眠Agent列表
+   */
+  getHibernatingAgents(): string[] {
+    const result: string[] = [];
+    this.states.forEach((state, agent) => {
+      if (state.hibernating) {
+        result.push(agent);
+      }
+    });
+    return result;
+  }
 }
 
 // =============== Singleton ===============

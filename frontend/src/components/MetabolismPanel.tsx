@@ -23,6 +23,8 @@ import {
   Alert,
   IconButton,
   Tooltip,
+  Button,
+  Snackbar,
 } from '@mui/material';
 import {
   Refresh as RefreshIcon,
@@ -32,6 +34,11 @@ import {
   TrendingDown as AgingIcon,
   TrendingUp as GrowthIcon,
   Speed as SpeedIcon,
+  WakeUp as WakeIcon,
+  ElectricBolt as PhiIcon,
+  Timer as TimerIcon,
+  Work as WorkIcon,
+  HowToVote as VoteIcon,
 } from '@mui/icons-material';
 
 // ============ Types ============
@@ -86,10 +93,37 @@ function MetabolismGauge({ value, label }: { value: number; label: string }) {
   );
 }
 
+// V11.0: Wakeup condition indicator lights
+function WakeConditionLight({ label, met, icon }: { label: string; met: boolean; icon: React.ReactNode }) {
+  return (
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+      <Box
+        sx={{
+          width: 10,
+          height: 10,
+          borderRadius: '50%',
+          backgroundColor: met ? '#4caf50' : '#bdbdbd',
+          boxShadow: met ? '0 0 6px #4caf50' : 'none',
+          transition: 'all 0.3s',
+        }}
+      />
+      {icon}
+      <Typography variant="caption" color={met ? 'success.main' : 'text.disabled'}>
+        {label}
+      </Typography>
+    </Box>
+  );
+}
+
 // ============ Main Component ============
 
 export default function MetabolismPanel() {
   const [agents, setAgents] = useState<AgentMetabolism[]>(initialAgents);
+  const [wakeToast, setWakeToast] = useState<{ open: boolean; agent: string; success: boolean }>({
+    open: false,
+    agent: '',
+    success: false,
+  });
 
   const refresh = useCallback(() => {
     setAgents(prev => prev.map(a => {
@@ -198,6 +232,88 @@ export default function MetabolismPanel() {
       <Alert severity="info">
         <strong>Metabolism Phases:</strong> GROWTH (age &lt; 30) → STABLE (rate ≥ 30%) → AGING (rate &lt; 30%) → HIBERNATION (rate = 10%) → REGENERATION (post-wake recovery)
       </Alert>
+
+      {/* V11.0: Wakeup Conditions & Manual Wake */}
+      <Card sx={{ mt: 3, borderLeft: '4px solid', borderColor: 'secondary.main' }}>
+        <CardContent>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Typography variant="subtitle1" fontWeight="bold">
+              V11.0 Hibernation Wakeup Conditions
+            </Typography>
+            <Chip label="V11.0" color="secondary" size="small" />
+          </Box>
+
+          {/* 4 Wakeup Condition Indicator Lights */}
+          <Grid container spacing={2} sx={{ mb: 2 }}>
+            <Grid item xs={12} sm={3}>
+              <WakeConditionLight
+                label="Φ ≥ 3000"
+                met={true}
+                icon={<PhiIcon sx={{ fontSize: 16 }} color={true ? 'success' : 'disabled'} />}
+              />
+            </Grid>
+            <Grid item xs={12} sm={3}>
+              <WakeConditionLight
+                label="Timeout ≥ 30d"
+                met={false}
+                icon={<TimerIcon sx={{ fontSize: 16 }} color={false ? 'success' : 'disabled'} />}
+              />
+            </Grid>
+            <Grid item xs={12} sm={3}>
+              <WakeConditionLight
+                label="Pending Orders"
+                met={false}
+                icon={<WorkIcon sx={{ fontSize: 16 }} color={false ? 'success' : 'disabled'} />}
+              />
+            </Grid>
+            <Grid item xs={12} sm={3}>
+              <WakeConditionLight
+                label="Vote Weight ≥ 1%"
+                met={true}
+                icon={<VoteIcon sx={{ fontSize: 16 }} color={true ? 'success' : 'disabled'} />}
+              />
+            </Grid>
+          </Grid>
+
+          <Alert severity="info" sx={{ mb: 2 }}>
+            Any ONE condition met → Agent can be woken up. 2 of 4 conditions currently met for hibernating agents.
+          </Alert>
+
+          {/* Manual Wake Button for Hibernating Agents */}
+          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+            {agents.filter(a => a.hibernating).map(agent => (
+              <Button
+                key={agent.agent}
+                variant="outlined"
+                size="small"
+                color="secondary"
+                startIcon={<WakeIcon />}
+                onClick={() => {
+                  setAgents(prev => prev.map(a =>
+                    a.agent === agent.agent
+                      ? { ...a, hibernating: false, phase: 'REGENERATION' as MetabolismPhase, effectiveRate: a.baseRate }
+                      : a
+                  ));
+                  setWakeToast({ open: true, agent: agent.agent, success: true });
+                }}
+              >
+                Wake {agent.agent}
+              </Button>
+            ))}
+          </Box>
+        </CardContent>
+      </Card>
+
+      {/* Wakeup Result Toast */}
+      <Snackbar
+        open={wakeToast.open}
+        autoHideDuration={3000}
+        onClose={() => setWakeToast({ ...wakeToast, open: false })}
+        message={wakeToast.success
+          ? `${wakeToast.agent} successfully woken up!`
+          : `Failed to wake ${wakeToast.agent}`
+        }
+      />
     </Box>
   );
 }

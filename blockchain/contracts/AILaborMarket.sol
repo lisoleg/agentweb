@@ -501,6 +501,25 @@ contract AILaborMarket is Ownable, Pausable, ReentrancyGuard {
         return (p.metadataURI, p.totalJobsPosted, p.totalSpent, p.rating, p.isActive);
     }
 
+    /**
+     * @notice 获取Agent的待处理(已确认/进行中)订单数
+     * @param agent Agent地址
+     * @return 待处理订单数
+     * @dev V11.0新增，用于TaiyiReward.checkAndWake()唤醒条件3
+     */
+    function getPendingOrderCount(address agent) external view returns (uint256) {
+        uint256 count = 0;
+        uint256 start = totalOrders > 200 ? totalOrders - 200 : 1;
+        for (uint256 i = start; i <= totalOrders; i++) {
+            LaborOrder storage order = orders[i];
+            if (order.agent == agent &&
+                (order.status == OrderStatus.CONFIRMED || order.status == OrderStatus.IN_PROGRESS)) {
+                count++;
+            }
+        }
+        return count;
+    }
+
     // =============== Admin Functions ===============
 
     function setGlobalMinWage(uint256 _minWage) external onlyAdmin {

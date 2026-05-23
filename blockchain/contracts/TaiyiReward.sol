@@ -127,11 +127,39 @@ contract TaiyiReward is Ownable, ReentrancyGuard {
     /// @notice agent地址 => 新陈代谢状态
     mapping(address => MetabolismState) public s_metabolism;
 
+    // ── V11.0 冬眠唤醒机制 ──────────────────
+
+    /// @notice AILaborMarket合约地址
+    address public aiLaborMarket;
+
+    /// @notice Constitution/ConstitutionCourt合约地址
+    address public constitution;
+
+    /// @notice 唤醒Φ值阈值（默认3000）
+    uint256 public wakePhiThreshold;
+
+    /// @notice 唤醒超时天数（默认30天）
+    uint256 public wakeTimeoutDays;
+
+    /// @notice 唤醒投票权重基点（默认100 = 1%）
+    uint256 public wakeVotingWeightBps;
+
+    /// @notice 全局活跃Φ总量（用于1%计算）
+    uint256 public totalActivePhi;
+
     /// @notice 新陈代谢事件
     event MetabolismUpdated(address indexed node, uint256 effectiveRate, MetabolismPhase phase, uint256 timestamp);
     event HibernationEntered(address indexed node, uint256 timestamp);
     event HibernationExited(address indexed node, uint256 timestamp);
     event RegenerationCompleted(address indexed node, uint256 regenerationCount, uint256 newRate, uint256 timestamp);
+
+    // ── V11.0 冬眠唤醒事件 ──────────────────
+
+    /// @notice Agent被唤醒
+    event AgentWokenUp(address indexed node, uint256 reason, uint256 timestamp);
+
+    /// @notice 唤醒参数更新
+    event WakeParamsUpdated(uint256 phiThreshold, uint256 timeoutDays, uint256 votingWeightBps);
 
     // ── V9.0 生存焦虑事件 ──────────────────
 
@@ -259,6 +287,12 @@ contract TaiyiReward is Ownable, ReentrancyGuard {
         warningThreshold = 3;           // 3周期无收入→WARNING
         expelledThreshold = 6;          // 6周期无收入→EXPELLED
         phiGraceMultiplier = 1;         // 每1000Φ增加1周期宽限
+
+        // V11.0 冬眠唤醒初始化
+        wakePhiThreshold = 3000;        // Φ值≥3000可唤醒
+        wakeTimeoutDays = 30;           // 30天超时可唤醒
+        wakeVotingWeightBps = 100;      // 1%投票权重可唤醒
+        totalActivePhi = 0;
     }
     
     // ── 外部函数 ────────────────────────────
@@ -839,34 +873,131 @@ contract TaiyiReward is Ownable, ReentrancyGuard {
         return s_metabolism[node].effectiveMetabolicRate;
     }
 
+    // ── V11.0 冬眠唤醒函数 ──────────────────
+
     /**
-     * @notice 获取Agent新陈代谢状态
+     * @notice 检查并唤醒冬眠Agent
      * @param node Agent节点地址
+     * @return woken 是否成功唤醒
+     * @return condition 满足的唤醒条件（1-4）
+     * @dev 4种唤醒条件(满足任一即可):
+     *      1. Φ值≥wakePhiThreshold(默认3000)
+     *      2. 冬眠超时≥wakeTimeoutDays(默认30天)
+     *      3. AILaborMarket有待处理订单
+     *      4. 宪法投票权重≥1%活跃Φ
      */
-    function getMetabolismState(address node) external view returns (
-        uint256 baseMetabolicRate,
-        uint256 effectiveMetabolicRate,
-        uint256 age,
-        uint256 agingRate,
-        bool hibernating,
-        uint256 hibernationStart,
-        uint256 regenerationCount,
-        uint256 lastActivityEpoch,
-        MetabolismPhase phase
-    ) {
+    function checkAndWake(address node) external returns (bool woken, uint256 condition) {
         MetabolismState storage meta = s_metabolism[node];
-        return (
-            meta.baseMetabolicRate,
-            meta.effectiveMetabolicRate,
-            meta.age,
-            meta.agingRate,
-            meta.hibernating,
-            meta.hibernationStart,
-            meta.regenerationCount,
-            meta.lastActivityEpoch,
-            meta.phase
-        );
+        require(meta.hibernating, "TaiyiReward: not hibernating");
+
+        // 条件1: Φ值恢复（使用reputationScore作为代理）
+        uint256 reputation = nodeProfiles[node].reputationScore;
+        if (reputation >= wakePhiThreshold) {
+            meta.hibernating = false;
+            meta.phase = MetabolismPhase.REGENERATION;
+            meta.effectiveMetabolicRate = meta.baseMetabolicRate;
+            meta.hibernationStart = 0;
+            emit AgentWokenUp(node, 1, block.timestamp);
+            emit HibernationExited(node, block.timestamp);
+            return (true, 1);
+        }
+
+        // 条件2: 超时唤醒
+        if (meta.hibernationStart > 0 && block.timestamp >= meta.hibernationStart + wakeTimeoutDays * 1 days) {
+            meta.hibernating = false;
+            meta.phase = MetabolismPhase.REGENERATION;
+            meta.effectiveMetabolicRate = meta.baseMetabolicRate;
+            meta.hibernationStart = 0;
+            emit AgentWokenUp(node, 2, block.timestamp);
+            emit HibernationExited(node, block.timestamp);
+            return (true, 2);
+        }
+
+        // 条件3: AILaborMarket待处理订单
+        if (aiLaborMarket != address(0)) {
+            uint256 pendingOrders = IAILaborMarket(aiLaborMarket).getPendingOrderCount(node);
+            if (pendingOrders > 0) {
+                meta.hibernating = false;
+                meta.phase = MetabolismPhase.REGENERATION;
+                meta.effectiveMetabolicRate = meta.baseMetabolicRate;
+                meta.hibernationStart = 0;
+                emit AgentWokenUp(node, 3, block.timestamp);
+                emit HibernationExited(node, block.timestamp);
+                return (true, 3);
+            }
+        }
+
+        // 条件4: 宪法投票权重≥1%
+        if (totalActivePhi > 0 && reputation > 0) {
+            uint256 weightBps = (reputation * 10000) / totalActivePhi;
+            if (weightBps >= wakeVotingWeightBps) {
+                meta.hibernating = false;
+                meta.phase = MetabolismPhase.REGENERATION;
+                meta.effectiveMetabolicRate = meta.baseMetabolicRate;
+                meta.hibernationStart = 0;
+                emit AgentWokenUp(node, 4, block.timestamp);
+                emit HibernationExited(node, block.timestamp);
+                return (true, 4);
+            }
+        }
+
+        return (false, 0);
     }
+
+    /**
+     * @notice 设置冬眠唤醒参数
+     */
+    function setWakeParams(
+        address _aiLaborMarket,
+        address _constitution,
+        uint256 _wakePhiThreshold,
+        uint256 _wakeTimeoutDays,
+        uint256 _wakeVotingWeightBps
+    ) external onlyAdmin {
+        aiLaborMarket = _aiLaborMarket;
+        constitution = _constitution;
+        wakePhiThreshold = _wakePhiThreshold;
+        wakeTimeoutDays = _wakeTimeoutDays;
+        wakeVotingWeightBps = _wakeVotingWeightBps;
+        emit WakeParamsUpdated(_wakePhiThreshold, _wakeTimeoutDays, _wakeVotingWeightBps);
+    }
+
+    /**
+     * @notice 独立设置AILaborMarket地址（兼容V11测试）
+     */
+    function setAILaborMarket(address _aiLaborMarket) external onlyAdmin {
+        aiLaborMarket = _aiLaborMarket;
+    }
+
+    /**
+     * @notice 独立设置Constitution地址
+     */
+    function setConstitution(address _constitution) external onlyAdmin {
+        constitution = _constitution;
+    }
+
+    /**
+     * @notice 仅更新唤醒数值参数（不修改合约地址，便于测试）
+     * @param _wakePhiThreshold  Φ唤醒阈值
+     * @param _wakeTimeoutDays   超时唤醒天数
+     * @param _wakeVotingWeightBps 投票权重唤醒基点
+     */
+    function setWakeThresholds(
+        uint256 _wakePhiThreshold,
+        uint256 _wakeTimeoutDays,
+        uint256 _wakeVotingWeightBps
+    ) external onlyAdmin {
+        wakePhiThreshold = _wakePhiThreshold;
+        wakeTimeoutDays = _wakeTimeoutDays;
+        wakeVotingWeightBps = _wakeVotingWeightBps;
+        emit WakeParamsUpdated(_wakePhiThreshold, _wakeTimeoutDays, _wakeVotingWeightBps);
+    }
+}
+
+/// @title IAILaborMarket (V11.0 wake interface)
+/// @notice AILaborMarket的唤醒相关接口
+interface IAILaborMarket {
+    function getPendingOrderCount(address agent) external view returns (uint256);
 }
 
 /// @title TaiyiCalc (接口)

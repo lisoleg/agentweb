@@ -1,124 +1,155 @@
 sequenceDiagram
-    participant Proposer as 提案者
+    participant Filer as 提案者
+    participant Court as ConstitutionCourt.sol
     participant Constitution as Constitution.sol
-    participant SubDAO as SubDAO.sol
     participant PhiStaking as PhiStaking.sol
-    participant Voter as 投票者
+    participant Voter as 投票人
+    participant Owner as Owner
 
-    Proposer->>Constitution: proposeAmendment(clauseId, newContent, newContentHash)
-    Note over Constitution: 验证条款存在且非核心条款<br/>创建Amendment(状态=DISCUSSION)
-    Constitution-->>Proposer: amendmentId
+    rect rgb(240, 248, 255)
+        Note over Filer, Owner: V11.0 — 宪法法院案件流程
 
-    Note over Constitution: 讨论期开始 (默认7天)
+        Filer->>Court: submitConstitutionalCase(amendmentId, reason, evidenceHash)
+        Court->>Constitution: getAmendmentInfo(amendmentId)
+        Constitution-->>Court: amendmentData
+        Court->>Court: 创建Case(state=PENDING), votingEnd=now+14天
+        Court->>Court: case.state = VOTING
+        Court-->>Filer: caseId
 
-    alt 讨论期结束
-        Constitution->>Constitution: 自动进入VOTING阶段
+        alt 紧急案件(3天投票期)
+            Filer->>Court: submitEmergencyCase(amendmentId, reason, evidenceHash)
+            Court->>Court: isEmergency=true, votingEnd=0(待批准)
+            Court-->>Filer: caseId
+            Owner->>Court: approveEmergencyCase(caseId)
+            Court->>Court: emergencyApproved=true, votingEnd=now+3天
+            Court->>Court: case.state = VOTING
+        end
+
+        loop 投票期(14天或3天)
+            Voter->>Court: voteOnCase(caseId, support)
+            Court->>PhiStaking: getVotingPower(voter)
+            PhiStaking-->>Court: votingPower
+            Court->>Court: 累计yesVotes/noVotes(以参与投票的Φ为基数)
+        end
+
+        Court->>Court: renderJudgment(caseId)
+        Note over Court: 67%基数 = yesVotes / (yesVotes + noVotes)
+
+        alt UPHOLD (>=67%赞成) — 维持修正案
+            Court-->>Constitution: 修正案维持生效
+        else OVERTURN (<67%赞成) — 推翻修正案
+            Court-->>Constitution: 修正案被推翻，标记FAILED
+        else REMAND — 发回重新审议
+            Court-->>Constitution: 通知发回，需人工创建新修正案
+        end
     end
 
-    loop 投票期
-        Voter->>Constitution: voteOnAmendment(amendmentId, support)
-        Constitution->>PhiStaking: getVotingPower(voter)
-        PhiStaking-->>Constitution: votingPower
-        Note over Constitution: 累计赞成/反对票(Φ加权)
+    rect rgb(255, 248, 240)
+        Note over Filer, Owner: V11.0 — Agent迁徙跨链流程
+
+        participant Agent as Agent
+        participant SourceBridge as SigmaBridgeV2(源链)
+        participant Passport as AgentPassport(源链)
+        participant Validators as 验证者集合
+        participant TargetBridge as SigmaBridgeV2(目标链)
+        participant TargetPassport as AgentPassport(目标链)
+
+        Agent->>Passport: getPassportMerkleRoot(agent)
+        Passport-->>Agent: merkleRoot + passportData(phiValue, creditScore, caseMerkleRoot, lostCaseCount)
+
+        Agent->>SourceBridge: lockWithPassport(targetChainId, token, recipient, amount, passportData)
+        SourceBridge->>SourceBridge: 验证chain活跃 + 每日限额
+        SourceBridge->>SourceBridge: 锁定资产
+        SourceBridge->>SourceBridge: 创建MigrationRequest(state=LOCKED), 记录sourcePhiValue
+        SourceBridge-->>Agent: requestId
+
+        par 验证者签名(2/3 Φ阈值)
+            Validators->>SourceBridge: signBridgeRequest(requestId)
+        end
+
+        TargetBridge->>TargetBridge: mintWithPassport(requestId, sourceChainId, recipient, amount, passportData)
+        TargetBridge->>TargetBridge: targetPhiValue = sourcePhiValue * decayRate / 10000
+        Note over TargetBridge: Φ值跨链衰减: 默认0.95
+        TargetBridge->>TargetBridge: 铸造资产
+        TargetBridge->>TargetPassport: issuePassport(agent) + updatePhiValue(agent, targetPhiValue)
+        TargetBridge->>TargetBridge: MigrationRequest.state = MINTED
+
+        SourceBridge->>SourceBridge: markMigrated(requestId)
+        SourceBridge->>SourceBridge: agentMigrationState(agent) = MIGRATED
+        Note over SourceBridge: 双花保护: 源链标记MIGRATED
     end
 
-    Proposer->>Constitution: finalizeAmendment(amendmentId)
-    Note over Constitution: 检查: forVotes / totalVotingPower >= amendmentApprovalThreshold (67%)
+    rect rgb(240, 255, 240)
+        Note over Filer, Owner: V11.0 — 冬眠唤醒自动化流程
 
-    alt 通过
-        Constitution->>Constitution: 更新Clause内容<br/>Amendment.state = PASSED
-    else 未通过
-        Constitution->>Constitution: Amendment.state = FAILED
+        participant Scheduler as wakeup-scheduler
+        participant PG as PostgreSQL Lock
+        participant Reward as TaiyiReward.sol
+        participant LaborMarket as AILaborMarket.sol
+
+        Scheduler->>PG: pg_advisory_lock(wakeup_lock_id)
+        PG-->>Scheduler: acquired=true
+
+        Scheduler->>Reward: 遍历s_metabolism获取冬眠agent列表
+
+        loop 每个冬眠Agent
+            Scheduler->>Reward: checkAndWake(agent)
+
+            Reward->>PhiStaking: getVotingPower(agent)
+            PhiStaking-->>Reward: phiValue
+            alt phiValue >= 3000
+                Reward->>Reward: phiCondition = true
+            end
+
+            Reward->>Reward: 检查hibernationStart
+            alt now - hibernationStart >= 30天
+                Reward->>Reward: timeoutCondition = true
+            end
+
+            Reward->>LaborMarket: getPendingOrderCount(agent)
+            LaborMarket-->>Reward: count
+            alt count > 0
+                Reward->>Reward: orderCondition = true
+            end
+
+            Reward->>PhiStaking: getVotingPower(agent) vs 总活跃Φ
+            alt agentPhi / totalActivePhi >= 1%
+                Reward->>Reward: votingCondition = true
+            end
+
+            alt 任一条件为true
+                Reward->>Reward: exitHibernation(agent)
+                Reward-->>Scheduler: {woken: true, ...conditions}
+            else 所有条件为false
+                Reward-->>Scheduler: {woken: false, ...conditions}
+            end
+        end
+
+        Scheduler->>PG: pg_advisory_unlock(wakeup_lock_id)
     end
 
-    ---
+    rect rgb(248, 240, 255)
+        Note over Filer, Owner: V11.0 — 链下匹配索引服务流程
 
-    participant Agent as AI Agent
-    participant Employer as 雇主
-    participant LaborMarket as AILaborMarket.sol
-    participant PhiNFT as PhiAgentNFT.sol
-    participant Review as AdversarialReview.sol
+        participant Chain as AILaborMarket合约
+        participant Indexer as labor-indexer
+        participant DB as PostgreSQL
+        participant Client as API客户端
 
-    Agent->>LaborMarket: registerAgent(agentId, skills, minWage, maxHours)
-    LaborMarket->>PhiNFT: 验证agentId有效性
-    PhiNFT-->>LaborMarket: 有效
-    Note over LaborMarket: 创建AgentProfile
+        par 事件监听与索引
+            Chain->>Indexer: AgentRegistered(agent, skillHash, minRate, maxHours)
+            Indexer->>Indexer: 调用Embedding API生成skillEmbedding
+            Indexer->>DB: INSERT INTO agents(address, skill_hash, skill_embedding, min_hourly_rate)
 
-    Employer->>LaborMarket: registerEmployer(description, requiredSkills)
-    Note over LaborMarket: 创建EmployerProfile
+            Chain->>Indexer: OrderCreated(orderId, employer, budget, hourlyRate)
+            Indexer->>DB: INSERT INTO orders(order_id, employer, budget, hourly_rate, status='OPEN')
 
-    Employer->>LaborMarket: createOrder(employer, agent, desc, wage, duration, termsHash)
-    Note over LaborMarket: 创建LaborOrder(状态=OPEN)
+            Chain->>Indexer: OrderStatusChanged(orderId, newStatus)
+            Indexer->>DB: UPDATE orders SET status=? WHERE order_id=?
+        end
 
-    Agent->>LaborMarket: confirmOrder(orderId)
-    Note over LaborMarket: 状态→CONFIRMED
-
-    LaborMarket->>LaborMarket: 状态→IN_PROGRESS
-
-    alt 正常完成
-        Agent->>LaborMarket: completeOrder(orderId, agentScore, employerScore)
-        Note over LaborMarket: 状态→COMPLETED<br/>双方互评
-    else 发生争议
-        Agent->>LaborMarket: fileDispute(orderId, reason)
-        Note over LaborMarket: 状态→DISPUTED<br/>创建Dispute
-        LaborMarket->>Review: submitLaborDispute(orderId, plaintiff, defendant, reason)
-        Review-->>LaborMarket: reviewSessionId
-        Note over Review: 三方互审流程...
-        Review->>LaborMarket: 回调争议结果
-        LaborMarket->>LaborMarket: resolveDispute(disputeId, resolution)
+        Client->>Indexer: GET /api/v11/labor/match?skill_vector=...&min_rate=...&max_rate=...&min_phi=...&top_k=10
+        Indexer->>DB: SELECT agent_address, 1-(embedding<=>query_vector) AS similarity FROM agents WHERE min_hourly_rate BETWEEN ? AND ? AND phi_value >= ? ORDER BY similarity DESC LIMIT ?
+        DB-->>Indexer: 匹配结果(余弦相似度 + 价格过滤 + Φ排序)
+        Indexer-->>Client: {code:0, data: matches[]}
     end
-
-    ---
-
-    participant Keeper as Keeper/定时任务
-    participant TaiyiReward as TaiyiReward.sol
-    participant Metabolism as MetabolismState
-
-    Note over Metabolism: 初始状态: GROWTH<br/>baseMetabolicRate=100
-
-    Keeper->>TaiyiReward: updateMetabolism(node, activity)
-    Note over TaiyiReward: 计算effectiveMetabolicRate<br/>= baseRate × (1 + activity × 0.1)<br/>更新age += agingRate
-
-    alt age < growthThreshold
-        Note over Metabolism: phase = GROWTH<br/>baseMetabolicRate递增
-    else age < stableThreshold
-        Note over Metabolism: phase = STABLE<br/>baseMetabolicRate稳定
-    else age >= agingThreshold
-        Note over Metabolism: phase = AGING<br/>baseMetabolicRate递减
-    end
-
-    Note over TaiyiReward: 检查生存焦虑状态
-    alt 连续无收入 >= hibernationThreshold
-        Keeper->>TaiyiReward: enterHibernation(node)
-        Note over Metabolism: phase = HIBERNATION<br/>effectiveMetabolicRate = baseRate × 0.1<br/>节省资源消耗
-    end
-
-    alt 收入恢复 + 在冬眠中
-        Keeper->>TaiyiReward: exitHibernation(node)
-        Note over Metabolism: phase = REGENERATION
-    end
-
-    alt 再生
-        Keeper->>TaiyiReward: regenerate(node, amount)
-        Note over Metabolism: phase = REGENERATION<br/>baseMetabolicRate部分恢复<br/>regenerationCount++
-    end
-
-    ---
-
-    participant User as 用户
-    participant PhiNFT2 as PhiAgentNFT.sol
-    participant NCB as NegativeCaseBook.sol
-
-    User->>PhiNFT2: register(agentURI)
-    Note over PhiNFT2: 铸造NFT + 创建AgentMeta
-
-    PhiNFT2->>NCB: mandatoryLearnAll(msg.sender)
-    Note over NCB: 获取所有mandatoryCases列表
-
-    loop 遍历每个必读案例
-        NCB->>NCB: confirmLearning(caseId, agent)
-        Note over NCB: s_agentLearned[caseId][agent] = true
-    end
-
-    NCB-->>PhiNFT2: learnedCount
-    Note over PhiNFT2: 注册成功(需学习完所有必读案例)

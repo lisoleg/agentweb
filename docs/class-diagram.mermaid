@@ -1,307 +1,269 @@
 classDiagram
     direction TB
 
-    class Constitution {
-        <<contract>>
-        -uint256 nextClauseId
-        -uint256 nextAmendmentId
-        -mapping uint256~Clause~ s_clauses
-        -mapping uint256~Amendment~ s_amendments
-        -mapping bytes32~bool~ s_coreClauseHashes
-        -address circuitBreaker
-        -address phiStaking
-        -address subDAO
-        -uint256 amendmentApprovalThreshold
-        -uint256 emergencyPauseThreshold
-        -uint256 discussionPeriodSeconds
-        +clauseCount() uint256
-        +addCoreClause(string title, string content, bytes32 contentHash) uint256
-        +addAmendableClause(string title, string content, bytes32 contentHash) uint256
-        +proposeAmendment(uint256 clauseId, string newContent, bytes32 newContentHash) uint256
-        +voteOnAmendment(uint256 amendmentId, bool support)
-        +finalizeAmendment(uint256 amendmentId) bool
-        +emergencyPause(string reason)
-        +emergencyUnpause(string reason)
-        +getClause(uint256 clauseId) Clause
-        +getAmendment(uint256 amendmentId) Amendment
-        +isCoreClause(uint256 clauseId) bool
-        +setCircuitBreaker(address cb)
-        +setPhiStaking(address ps)
-        +setAmendmentThreshold(uint256 threshold)
+    class ConstitutionCourt {
+        +uint256 totalCases
+        +uint256 votingPeriod
+        +uint256 emergencyVotingPeriod
+        +uint256 approvalThreshold
+        +address constitution
+        +address phiStaking
+        +mapping~uint256=>ConstitutionCase~ cases
+        +mapping~address=>bool~ admins
+        +submitConstitutionalCase(amendmentId, reason, evidenceHash) uint256
+        +submitEmergencyCase(amendmentId, reason, evidenceHash) uint256
+        +approveEmergencyCase(caseId) bool
+        +voteOnCase(caseId, support) bool
+        +renderJudgment(caseId) JudgmentType
+        +getCase(caseId) ConstitutionCaseView
+        +getCaseCount() uint256
+        +setConstitution(address) void
+        +setPhiStaking(address) void
     }
 
-    class Clause {
-        <<struct>>
-        +uint256 clauseId
-        +string title
-        +string content
-        +bytes32 contentHash
-        +bool isCore
-        +bool isActive
-        +uint256 createdAt
-        +uint256 updatedAt
-    }
-
-    class Amendment {
-        <<struct>>
-        +uint256 amendmentId
-        +uint256 targetClauseId
-        +address proposer
-        +string newContent
-        +bytes32 newContentHash
-        +uint256 forVotes
-        +uint256 againstVotes
-        +uint256 totalVotingPower
-        +uint256 discussionStart
-        +uint256 votingDeadline
-        +AmendmentState state
-    }
-
-    class AmendmentState {
-        <<enum>>
-        DISCUSSION
-        VOTING
-        PASSED
-        FAILED
-        EXPIRED
-    }
-
-    class NegativeCaseBook {
-        <<contract>>
-        -uint256 nextCaseId
-        -mapping uint256~NegativeCase~ s_cases
-        -mapping bytes32~uint256[]~ s_categoryIndex
-        -mapping uint256~mapping address~bool~~ s_agentLearned
-        -mapping address~uint256~ s_agentMandatoryProgress
-        -uint256 mandatoryCaseCount
-        -address phiAgentNFT
-        +recordCase(string title, string description, bytes32 category, uint8 severity, bytes32 evidenceHash) uint256
-        +markMandatory(uint256 caseId)
-        +unmarkMandatory(uint256 caseId)
-        +confirmLearning(uint256 caseId, address agent)
-        +mandatoryLearnAll(address agent) uint256
-        +softDelete(uint256 caseId)
-        +getCase(uint256 caseId) NegativeCase
-        +getCasesByCategory(bytes32 category) uint256[]
-        +getMandatoryCases() uint256[]
-        +hasAgentLearned(uint256 caseId, address agent) bool
-        +getAgentProgress(address agent) uint256 uint256
-        +searchCases(string query, bytes32 category) uint256[]
-    }
-
-    class NegativeCase {
-        <<struct>>
+    class ConstitutionCase {
         +uint256 caseId
-        +string title
-        +string description
-        +bytes32 category
-        +uint8 severity
-        +bytes32 evidenceHash
-        +address recorder
-        +bool isMandatory
-        +bool softDeleted
-        +uint256 timestamp
-    }
-
-    class AILaborMarket {
-        <<contract>>
-        -uint256 nextOrderId
-        -uint256 nextDisputeId
-        -mapping uint256~LaborOrder~ s_orders
-        -mapping address~AgentLaborProfile~ s_agentProfiles
-        -mapping address~EmployerProfile~ s_employerProfiles
-        -mapping uint256~LaborDispute~ s_disputes
-        -address adversarialReview
-        -address phiAgentNFT
-        -address constitution
-        +registerAgent(uint256 agentId, string[] skills, uint256 minWage, uint256 maxHours)
-        +registerEmployer(string description, string[] requiredSkills)
-        +createOrder(address employer, address agent, string description, uint256 wage, uint256 duration, bytes32 termsHash) uint256
-        +confirmOrder(uint256 orderId)
-        +completeOrder(uint256 orderId, uint8 agentScore, uint8 employerScore)
-        +cancelOrder(uint256 orderId, string reason)
-        +fileDispute(uint256 orderId, string reason) uint256
-        +resolveDispute(uint256 disputeId, uint8 resolution)
-        +getOrder(uint256 orderId) LaborOrder
-        +getAgentProfile(address agent) AgentLaborProfile
-        +getDispute(uint256 disputeId) LaborDispute
-        +findMatchingAgents(string[] skills, uint256 maxWage) address[]
-    }
-
-    class LaborOrder {
-        <<struct>>
-        +uint256 orderId
-        +address employer
-        +address agent
-        +string description
-        +uint256 wage
-        +uint256 duration
-        +bytes32 termsHash
-        +OrderStatus status
-        +uint8 agentScore
-        +uint8 employerScore
-        +uint256 createdAt
-        +uint256 completedAt
-    }
-
-    class OrderStatus {
-        <<enum>>
-        OPEN
-        CONFIRMED
-        IN_PROGRESS
-        COMPLETED
-        CANCELLED
-        DISPUTED
-    }
-
-    class AgentLaborProfile {
-        <<struct>>
-        +address agent
-        +uint256 agentId
-        +string[] skills
-        +uint256 minWage
-        +uint256 maxHours
-        +uint256 completedJobs
-        +uint256 totalEarnings
-        +uint256 avgRating
-        +bool isActive
-    }
-
-    class EmployerProfile {
-        <<struct>>
-        +address employer
-        +string description
-        +string[] requiredSkills
-        +uint256 completedJobs
-        +uint256 totalSpent
-        +uint256 avgRating
-        +bool isActive
-    }
-
-    class LaborDispute {
-        <<struct>>
-        +uint256 disputeId
-        +uint256 orderId
-        +address plaintiff
-        +address defendant
+        +uint256 amendmentId
+        +address filer
         +string reason
-        +DisputeStatus status
-        +uint256 reviewSessionId
-        +uint8 resolution
-        +uint256 timestamp
+        +bytes32 evidenceHash
+        +CaseState state
+        +bool isEmergency
+        +bool emergencyApproved
+        +uint256 votingStart
+        +uint256 votingEnd
+        +uint256 yesVotes
+        +uint256 noVotes
+        +uint256 totalVoters
+        +JudgmentType judgment
+        +mapping~address=>bool~ hasVoted
+        +mapping~address=>uint256~ votePower
     }
 
-    class DisputeStatus {
-        <<enum>>
-        FILED
-        UNDER_REVIEW
-        RESOLVED_FAVOR_PLAINTIFF
-        RESOLVED_FAVOR_DEFENDANT
-        RESOLVED_COMPROMISE
-    }
-
-    class PhiAgentNFT {
-        <<contract - MODIFIED>>
-        ...existing code...
-        -address negativeCaseBook
-        +setNegativeCaseBook(address ncb)
-        +register(string agentURI) uint256
-    }
-
-    class TaiyiReward {
-        <<contract - MODIFIED>>
-        ...existing V9.0 code...
-        -mapping address~MetabolismState~ s_metabolism
-        +updateMetabolism(address node, uint256 activity)
-        +enterHibernation(address node)
-        +exitHibernation(address node)
-        +regenerate(address node, uint256 amount)
-        +getMetabolismState(address node) MetabolismState
-        +calculateMetabolicRate(address node) uint256
-    }
-
-    class MetabolismState {
-        <<struct>>
-        +uint256 baseMetabolicRate
-        +uint256 effectiveMetabolicRate
-        +uint256 age
-        +uint256 agingRate
-        +bool hibernating
-        +uint256 hibernationStart
-        +uint256 regenerationCount
-        +uint256 lastActivityEpoch
-        +MetabolismPhase phase
-    }
-
-    class MetabolismPhase {
-        <<enum>>
-        GROWTH
-        STABLE
-        AGING
-        HIBERNATION
-        REGENERATION
-    }
-
-    class PhiStaking {
-        <<contract - MODIFIED>>
-        ...existing V9.0 code...
-        -address constitution
-        -mapping uint256~EvolutionProposal~ s_evolutionProposals
-        +proposeEvolution(string description, bytes calldata_) uint256
-        +voteOnEvolution(uint256 proposalId, bool support)
-        +executeEvolution(uint256 proposalId)
-        +setConstitution(address constitution)
-    }
-
-    class EvolutionProposal {
-        <<struct>>
-        +uint256 proposalId
-        +address proposer
-        +string description
-        +bytes calldata_
-        +uint256 forVotes
-        +uint256 againstVotes
-        +EvolutionState state
-        +uint256 createdAt
-    }
-
-    class EvolutionState {
-        <<enum>>
-        PROPOSED
-        CONSTITUTION_CHECK
+    class CaseState {
+        <<enumeration>>
+        PENDING
         VOTING
-        PASSED
-        FAILED
-        EXECUTED
+        RESOLVED
+        DISMISSED
     }
 
-    class CircuitBreaker {
-        <<contract - MODIFIED>>
-        ...existing V9.0 code...
-        -address constitution
-        +constitutionEmergencyBreak(uint256 agentId, string reason)
-        +setConstitution(address constitution)
+    class JudgmentType {
+        <<enumeration>>
+        UPHOLD
+        OVERTURN
+        REMAND
     }
 
-    class AdversarialReview {
-        <<contract - MODIFIED>>
-        ...existing V9.0 code...
-        +submitLaborDispute(uint256 orderId, address plaintiff, address defendant, string reason) uint256
+    class AgentPassport {
+        +uint256 totalPassports
+        +mapping~address=>Passport~ passports
+        +mapping~address=>bool~ issued
+        +address negativeCaseBook
+        +address phiStaking
+        +address constitutionCourt
+        +issuePassport(agent) bool
+        +updatePhiValue(agent, phiValue) bool
+        +updateCreditScore(agent, score) bool
+        +updateCaseMerkleRoot(agent, merkleRoot) bool
+        +incrementLostCases(agent) bool
+        +getPassport(agent) PassportView
+        +getPassportMerkleRoot(agent) bytes32
+        +revokePassport(agent) bool
+        +setNegativeCaseBook(address) void
+        +setPhiStaking(address) void
+        +setConstitutionCourt(address) void
     }
 
-    Constitution "1" --> "*" Clause : 管理
-    Constitution "1" --> "*" Amendment : 管理
-    Constitution --> CircuitBreaker : 紧急暂停触发
-    Constitution --> PhiStaking : 进化提案校验
-    NegativeCaseBook "1" --> "*" NegativeCase : 管理
-    NegativeCaseBook --> PhiAgentNFT : 强制学习钩子
-    PhiAgentNFT --> NegativeCaseBook : register时调用
-    AILaborMarket "1" --> "*" LaborOrder : 管理
-    AILaborMarket "1" --> "*" LaborDispute : 管理
-    AILaborMarket --> AdversarialReview : 争议对接
-    AILaborMarket --> Constitution : 劳动保护条款引用
-    AILaborMarket --> PhiAgentNFT : Agent身份验证
-    TaiyiReward "1" --> "*" MetabolismState : 管理
-    PhiStaking "1" --> "*" EvolutionProposal : 管理
-    PhiStaking --> Constitution : 宪法校验
-    CircuitBreaker <-- Constitution : 被触发
+    class Passport {
+        +address agent
+        +uint256 phiValue
+        +uint256 creditScore
+        +bytes32 caseMerkleRoot
+        +uint256 lostCaseCount
+        +uint256 totalCaseCount
+        +uint256 issuedAt
+        +uint256 lastUpdated
+        +bool active
+    }
+
+    class SigmaBridgeV2 {
+        +uint256 immutable CHAIN_ID
+        +uint256 decayRate
+        +address agentPassport
+        +mapping~bytes32=>MigrationRequest~ migrationRequests
+        +mapping~address=>MigrationState~ agentMigrationState
+        +lockWithPassport(targetChainId, token, recipient, amount, passportData) bytes32
+        +mintWithPassport(requestId, sourceChainId, token, recipient, amount, passportData) bool
+        +markMigrated(requestId) bool
+        +setDecayRate(rate) void
+        +setAgentPassport(address) void
+        +getMigrationRequest(requestId) MigrationRequestView
+        +getAgentMigrationState(agent) MigrationState
+    }
+
+    class MigrationRequest {
+        +bytes32 requestId
+        +address agent
+        +uint256 sourcePhiValue
+        +uint256 targetPhiValue
+        +uint256 sourceChainId
+        +uint256 targetChainId
+        +uint256 amount
+        +address token
+        +MigrationState state
+        +uint256 createdAt
+        +uint256 deadline
+        +PassportData passportData
+        +uint256 validatorSignCount
+        +uint256 validatorPhiWeight
+    }
+
+    class PassportData {
+        +uint256 phiValue
+        +uint256 creditScore
+        +bytes32 caseMerkleRoot
+        +uint256 lostCaseCount
+    }
+
+    class MigrationState {
+        <<enumeration>>
+        NONE
+        LOCKED
+        MINTED
+        MIGRATED
+    }
+
+    class TaiyiReward_V11 {
+        +address aiLaborMarket
+        +address constitution
+        +uint256 wakePhiThreshold
+        +uint256 wakeTimeoutDays
+        +uint256 wakeVotingWeightBps
+        +checkAndWake(node) WakeResult
+        +_checkPhiThreshold(node) bool
+        +_checkTimeout(node) bool
+        +_checkPendingOrders(node) bool
+        +_checkVotingWeight(node) bool
+        +setAILaborMarket(address) void
+        +setConstitution(address) void
+        +setWakeParams(phiThreshold, timeoutDays, votingWeightBps) void
+    }
+
+    class WakeResult {
+        +bool woken
+        +bool phiCondition
+        +bool timeoutCondition
+        +bool orderCondition
+        +bool votingCondition
+    }
+
+    class CourtService {
+        -ConstitutionCourtContract courtContract
+        +submitCase(amendmentId, reason, evidenceHash) CaseDTO
+        +submitEmergencyCase(amendmentId, reason, evidenceHash) CaseDTO
+        +approveEmergency(caseId) CaseDTO
+        +voteOnCase(caseId, voter, support) CaseDTO
+        +renderJudgment(caseId) CaseDTO
+        +getCase(caseId) CaseDTO
+        +listCases() CaseDTO[]
+    }
+
+    class PassportService {
+        -AgentPassportContract passportContract
+        +issuePassport(agent) PassportDTO
+        +updatePhiValue(agent, phiValue) PassportDTO
+        +updateCaseMerkleRoot(agent, merkleRoot) PassportDTO
+        +getPassport(agent) PassportDTO
+        +getPassportMerkleRoot(agent) string
+    }
+
+    class CrossChainBridgeService_V11 {
+        +lockWithPassport(params) BridgeRequest
+        +mintWithPassport(requestId) BridgeRequest
+        +markMigrated(requestId) BridgeRequest
+        +getDecayRate() uint256
+    }
+
+    class MetabolismService_V11 {
+        +checkWakeConditions(agent) WakeConditionsDTO
+        +wakeAgent(agent) MetabolismState
+        +getHibernatingAgents() string[]
+    }
+
+    class WakeupScheduler {
+        -cronTimer timer
+        -PgAdvisoryLock lock
+        -TaiyiRewardContract rewardContract
+        +start() void
+        +stop() void
+        +scanAndWake() WakeResult[]
+        -_acquireLock() bool
+        -_releaseLock() void
+        -_getHibernatingAgents() address[]
+    }
+
+    class LaborIndexer {
+        -EventWatcher watcher
+        -PgPool pgPool
+        +start() void
+        +stop() void
+        -_onAgentRegistered(event) void
+        -_onOrderCreated(event) void
+        -_onOrderStatusChanged(event) void
+        +matchAgents(query, minRate, maxRate, minPhi, topK) AgentMatch[]
+    }
+
+    class LaborRepository {
+        -PgPool pgPool
+        +insertAgent(agent) void
+        +updateAgentPhi(agent, phiValue) void
+        +insertOrder(order) void
+        +updateOrderStatus(orderId, status) void
+        +findMatchingAgents(queryVector, minRate, maxRate, minPhi, topK) AgentMatch[]
+    }
+
+    class CourtPanel {
+        +cases: CaseDTO[]
+        +selectedCase: CaseDTO
+        +loading: boolean
+        +loadCases() void
+        +submitCase() void
+        +voteOnCase() void
+        +renderJudgment() void
+    }
+
+    class BridgePanel {
+        +chains: ChainConfig[]
+        +passport: PassportDTO
+        +migrationState: MigrationState
+        +initiateMigration() void
+        +loadPassport() void
+    }
+
+    class MetabolismPanel_V11 {
+        +agents: AgentMetabolism[]
+        +wakeConditions: WakeConditionsMap
+        +checkWakeConditions(agent) void
+        +manualWake(agent) void
+    }
+
+    ConstitutionCourt "1" --> "*" ConstitutionCase : manages
+    ConstitutionCase --> CaseState : has
+    ConstitutionCase --> JudgmentType : yields
+    AgentPassport "1" --> "*" Passport : manages
+    SigmaBridgeV2 "1" --> "*" MigrationRequest : manages
+    MigrationRequest --> MigrationState : has
+    MigrationRequest --> PassportData : contains
+    TaiyiReward_V11 --> WakeResult : returns
+    CourtService --> ConstitutionCourt : calls
+    PassportService --> AgentPassport : calls
+    CrossChainBridgeService_V11 --> SigmaBridgeV2 : calls
+    MetabolismService_V11 --> TaiyiReward_V11 : calls
+    WakeupScheduler --> TaiyiReward_V11 : calls
+    WakeupScheduler --> MetabolismService_V11 : uses
+    LaborIndexer --> LaborRepository : writes
+    CourtPanel --> CourtService : uses
+    BridgePanel --> CrossChainBridgeService_V11 : uses
+    BridgePanel --> PassportService : uses
+    MetabolismPanel_V11 --> MetabolismService_V11 : uses

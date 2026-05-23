@@ -440,7 +440,7 @@ describe("V10.0 宪法治理与劳动力市场闭环测试", function () {
         taiyiReward.connect(validator).updateMetabolism(agent1.address, 5000)
       ).to.emit(taiyiReward, "MetabolismUpdated");
 
-      const state = await taiyiReward.getMetabolismState(agent1.address);
+      const state = await taiyiReward.s_metabolism(agent1.address);
       expect(state.baseMetabolicRate).to.equal(5000n);
       expect(state.phase).to.equal(0); // GROWTH (age < 30)
       expect(state.effectiveMetabolicRate).to.be.gt(0n);
@@ -455,7 +455,7 @@ describe("V10.0 宪法治理与劳动力市场闭环测试", function () {
         taiyiReward.connect(validator).enterHibernation(agent1.address)
       ).to.emit(taiyiReward, "HibernationEntered");
 
-      const state = await taiyiReward.getMetabolismState(agent1.address);
+      const state = await taiyiReward.s_metabolism(agent1.address);
       expect(state.hibernating).to.equal(true);
       expect(state.phase).to.equal(3); // HIBERNATION
       // 有效代谢率应降至基础率的1/10
@@ -471,7 +471,7 @@ describe("V10.0 宪法治理与劳动力市场闭环测试", function () {
         taiyiReward.connect(validator).exitHibernation(agent1.address)
       ).to.emit(taiyiReward, "HibernationExited");
 
-      const state = await taiyiReward.getMetabolismState(agent1.address);
+      const state = await taiyiReward.s_metabolism(agent1.address);
       expect(state.hibernating).to.equal(false);
       expect(state.phase).to.equal(4); // REGENERATION
       expect(state.effectiveMetabolicRate).to.equal(state.baseMetabolicRate);
@@ -485,7 +485,7 @@ describe("V10.0 宪法治理与劳动力市场闭环测试", function () {
         taiyiReward.connect(validator).regenerate(agent1.address, 2000)
       ).to.emit(taiyiReward, "RegenerationCompleted");
 
-      const state = await taiyiReward.getMetabolismState(agent1.address);
+      const state = await taiyiReward.s_metabolism(agent1.address);
       expect(state.regenerationCount).to.equal(1n);
       expect(state.phase).to.equal(1); // STABLE
       // 基础代谢率应增加
@@ -609,7 +609,7 @@ describe("V10.0 宪法治理与劳动力市场闭环测试", function () {
 
       // ===== 4. 新陈代谢更新 =====
       await taiyiReward.connect(validator).updateMetabolism(agent1.address, 8000);
-      const metaState = await taiyiReward.getMetabolismState(agent1.address);
+      const metaState = await taiyiReward.s_metabolism(agent1.address);
       expect(metaState.baseMetabolicRate).to.equal(5000n);
       expect(metaState.effectiveMetabolicRate).to.be.gt(0n);
       expect(metaState.phase).to.equal(0); // GROWTH

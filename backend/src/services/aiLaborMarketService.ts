@@ -311,6 +311,19 @@ class AILaborMarketServiceClass {
       platformFeeBps: this.platformFeeBps,
     };
   }
+
+  /**
+   * V11.0: 获取Agent的待处理订单数量（OPEN状态）
+   */
+  getPendingOrderCount(agent: string): number {
+    let count = 0;
+    this.orders.forEach(order => {
+      if (order.agent === agent && order.status === 'OPEN') {
+        count++;
+      }
+    });
+    return count;
+  }
 }
 
 // =============== Singleton ===============

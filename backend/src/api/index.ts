@@ -23,6 +23,7 @@ import reviewRoutes from './review';  // V9.0: 互审路由
 import constitutionRoutes from './constitution';  // V10.0: 宪法治理路由
 import laborMarketRoutes from './labor-market';  // V10.0: AI劳动力市场路由
 import metabolismRoutes from './metabolism';  // V10.0: 新陈代谢路由
+import v11Routes from './v11';  // V11.0: 宪法法院+跨链V2+唤醒+索引路由
 import { hottTypeChecker } from '../services/hottTypeChecker';
 import { dualTrackRouter } from '../services/dualTrackRouter';  // V2.0: Dual-Track 双轨桥接器
 
@@ -35,8 +36,8 @@ router.use(phiGatewayMiddleware);
 router.get('/', (_req, res) => {
   res.json({
     name: 'AgentWeb API',
-    version: '10.0.0',  // V10.0: Constitution + NegativeCaseBook + AI Labor Market + Metabolism
-    description: 'AgentWeb 西格玛云 - Next-generation digital society infrastructure (Fediverse + Four-Token + IGCTR + SubDAO + Cross-Chain + Taiyi Oracle + Brainwave + Supernode Alignment + Agent Economy Settlement + Survival Anxiety + Adversarial Review + Constitution + AI Labor Market + Metabolism)',
+    version: '11.0.0',  // V11.0: ConstitutionCourt + AgentPassport + SigmaBridgeV2 + HibernationWakeup + LaborIndexer
+    description: 'AgentWeb 西格玛云 - Next-generation digital society infrastructure (Fediverse + Four-Token + IGCTR + SubDAO + Cross-Chain + Taiyi Oracle + Brainwave + Supernode Alignment + Agent Economy Settlement + Survival Anxiety + Adversarial Review + Constitution + AI Labor Market + Metabolism + ConstitutionCourt + AgentPassport + CrossChainV2 + HibernationWakeup + LaborIndexer)',
     endpoints: {
       auth: '/api/v1/auth',
       did: '/api/v1/did',
@@ -63,10 +64,11 @@ router.get('/', (_req, res) => {
       review: '/api/v1/review',              // V9.0: 对抗互审+熔断
       constitution: '/api/v1/constitution', // V10.0: 宪法治理
       laborMarket: '/api/v1/labor-market',  // V10.0: AI劳动力市场
-      metabolism: '/api/v1/metabolism'      // V10.0: 新陈代谢
+      metabolism: '/api/v1/metabolism',      // V10.0: 新陈代谢
+      v11: '/api/v11',                        // V11.0: 宪法法院+跨链V2+唤醒+索引
     },
     documentation: process.env.ENABLE_SWAGGER === 'true' ? '/api-docs' : undefined,
-    versionNotes: 'V10.0: Constitution + NegativeCaseBook + AI Labor Market + Metabolism (Constitution, NegativeCaseBook, AILaborMarket, Metabolism, PhiStaking Evolution)'
+    versionNotes: 'V11.0: ConstitutionCourt + AgentPassport + SigmaBridgeV2 + HibernationWakeup + LaborIndexer'
   });
 });
 
@@ -90,6 +92,9 @@ router.use('/review', reviewRoutes);    // V9.0: 对抗互审+熔断
 router.use('/constitution', constitutionRoutes);  // V10.0: 宪法治理
 router.use('/labor-market', laborMarketRoutes);    // V10.0: AI劳动力市场
 router.use('/metabolism', metabolismRoutes);        // V10.0: 新陈代谢
+
+// V11.0: Mount V11 routes at /api/v1/v11
+router.use('/v11', v11Routes);
 
 // =============== HoTT Type Checker Route ===============
 router.get('/hott/types', (_req, res) => {

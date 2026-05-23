@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { governanceAPI } from '../services/api';
 import { useAuth } from '../hooks/useAuth';
+import CourtPanel from '../components/CourtPanel';
 
 function Governance() {
   const { user } = useAuth();
@@ -16,6 +17,7 @@ function Governance() {
   const [error, setError] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [newProposal, setNewProposal] = useState({ description: '', deadlineDays: 7 });
+  const [activeTab, setActiveTab] = useState<'proposals' | 'court'>('proposals');
 
   useEffect(() => {
     loadProposals();
@@ -66,7 +68,27 @@ function Governance() {
 
       {error && <div className="error-message">{error}</div>}
 
-      <div className="actions">
+      {/* V11.0: Tab Navigation */}
+      <div className="tab-navigation">
+        <button
+          className={`tab-btn ${activeTab === 'proposals' ? 'active' : ''}`}
+          onClick={() => setActiveTab('proposals')}
+        >
+          Proposals
+        </button>
+        <button
+          className={`tab-btn ${activeTab === 'court' ? 'active' : ''}`}
+          onClick={() => setActiveTab('court')}
+        >
+          Constitution Court (V11.0)
+        </button>
+      </div>
+
+      {/* Court Tab */}
+      {activeTab === 'court' && <CourtPanel />}
+
+      {/* Proposals Tab */}
+      {activeTab === 'proposals' && (
         <button
           onClick={() => setShowCreate(!showCreate)}
           className="primary-btn"

@@ -79,6 +79,35 @@ export interface ValidatorSignature {
   timestamp: number;
 }
 
+// =============== V11.0 Passport Bridge Types ===============
+
+export interface PassportData {
+  phiValue: number;
+  creditScore: number;
+  caseMerkleRoot: string;
+  lostCaseCount: number;
+}
+
+export enum MigrationState {
+  NONE = 'NONE',
+  LOCKED = 'LOCKED',
+  MINTED = 'MINTED',
+  MIGRATED = 'MIGRATED',
+}
+
+export interface MigrationRequest {
+  requestId: string;
+  agent: string;
+  sourceChainId: number;
+  targetChainId: number;
+  amount: number;
+  passportData: PassportData;
+  decayedPhi: number;
+  state: MigrationState;
+  createdAt: number;
+  completedAt: number;
+}
+
 // =============== 链适配器 ===============
 
 interface ChainAdapter {
@@ -214,6 +243,11 @@ class CrossChainBridgeServiceClass {
   private requests: Map<string, BridgeRequest> = new Map();
   private totalPhiWeight: number = 0;
   private nonce: number = 0;
+
+  // V11.0: Migration requests with passport
+  private migrationRequests: Map<string, MigrationRequest> = new Map();
+  private migrationNonce: number = 0;
+  private decayRate: number = 9500;  // 5% decay by default
 
   // 常量
   private readonly SIGNATURE_THRESHOLD = 2 / 3;  // 2/3签名阈值
@@ -596,6 +630,116 @@ class CrossChainBridgeServiceClass {
   isBridgeConfirmed(requestId: string): boolean {
     const request = this.requests.get(requestId);
     return request ? this._isConfirmed(request) : false;
+  }
+
+  // =============== V11.0 Passport Bridge Methods ===============
+
+  /**
+   * V11.0: 锁定资产并携带Passport数据
+   */
+  async lockWithPassport(params: {
+    targetChainId: number;
+    token: string;
+    sender: string;
+    amount: number;
+    passportData: PassportData;
+  }): Promise<MigrationRequest> {
+    const { targetChainId, token, sender, amount, passportData } = params;
+
+    const targetChain = this.chains.get(targetChainId);
+    if (!targetChain || !targetChain.active) {
+      throw new Error(`Target chain ${targetChainId} not active`);
+    }
+    if (passportData.phiValue > 10000) {
+      throw new Error('Invalid phiValue (max 10000)');
+    }
+    if (passportData.creditScore > 10000) {
+      throw new Error('Invalid creditScore (max 10000)');
+    }
+
+    // Check daily limit
+    this._resetDailyIfNeeded(targetChain);
+    if (targetChain.dailyUsed + amount > targetChain.dailyLimit) {
+      throw new Error('Daily limit exceeded');
+    }
+
+    const requestId = `migration_${Date.now()}_${crypto.randomBytes(6).toString('hex')}`;
+
+    const request: MigrationRequest = {
+      requestId,
+      agent: sender,
+      sourceChainId: 1,
+      targetChainId,
+      amount,
+      passportData,
+      decayedPhi: 0,  // Will be calculated in mintWithPassport
+      state: MigrationState.LOCKED,
+      createdAt: Date.now(),
+      completedAt: 0,
+    };
+
+    this.migrationRequests.set(requestId, request);
+    targetChain.dailyUsed += amount;
+
+    console.log(`🔒 [BridgeV2] Locked with passport: ${amount} from ${sender} → chain ${targetChainId}, phi=${passportData.phiValue}`);
+
+    return request;
+  }
+
+  /**
+   * V11.0: 在目标链铸造并应用Φ衰减
+   */
+  async mintWithPassport(requestId: string): Promise<MigrationRequest> {
+    const request = this.migrationRequests.get(requestId);
+    if (!request) throw new Error('Migration request not found');
+    if (request.state !== MigrationState.LOCKED) throw new Error('Invalid state for mint');
+
+    // Calculate Φ decay: targetPhi = sourcePhi * decayRate / 10000
+    const decayedPhi = Math.floor((request.passportData.phiValue * this.decayRate) / 10000);
+    request.decayedPhi = decayedPhi;
+    request.state = MigrationState.MINTED;
+
+    console.log(`🪙 [BridgeV2] Minted with passport: phi decayed ${request.passportData.phiValue} → ${decayedPhi} (rate=${this.decayRate})`);
+
+    return request;
+  }
+
+  /**
+   * V11.0: 标记迁徙完成
+   */
+  markMigrated(requestId: string): MigrationRequest {
+    const request = this.migrationRequests.get(requestId);
+    if (!request) throw new Error('Migration request not found');
+    if (request.state !== MigrationState.MINTED) throw new Error('Not in MINTED state');
+
+    request.state = MigrationState.MIGRATED;
+    request.completedAt = Date.now();
+
+    console.log(`✅ [BridgeV2] Migration completed for ${request.agent}`);
+
+    return request;
+  }
+
+  /**
+   * V11.0: 计算Φ衰减（纯计算）
+   */
+  calculateDecayedPhi(sourcePhi: number): number {
+    return Math.floor((sourcePhi * this.decayRate) / 10000);
+  }
+
+  /**
+   * V11.0: 设置衰减率
+   */
+  setDecayRate(rate: number): void {
+    if (rate <= 0 || rate > 10000) throw new Error('Invalid decay rate');
+    this.decayRate = rate;
+  }
+
+  /**
+   * V11.0: 获取迁徙请求
+   */
+  getMigrationRequest(requestId: string): MigrationRequest | undefined {
+    return this.migrationRequests.get(requestId);
   }
 }
 
