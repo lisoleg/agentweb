@@ -80,6 +80,12 @@ contract ConstitutionCourt is Ownable, Pausable, ReentrancyGuard {
     /// @notice 管理员
     mapping(address => bool) public admins;
 
+    /// @notice 案件AI分析报告哈希 (caseId => IPFS hash)
+    mapping(uint256 => bytes32) public caseAnalysisHashes;
+
+    /// @notice 案件模拟结果哈希 (caseId => IPFS hash)
+    mapping(uint256 => bytes32) public caseSimulationHashes;
+
     // =============== Events ===============
 
     event CaseSubmitted(uint256 indexed caseId, uint256 indexed amendmentId, address indexed filer, bool isEmergency, uint256 timestamp);
@@ -330,6 +336,48 @@ contract ConstitutionCourt is Ownable, Pausable, ReentrancyGuard {
         uint256 total = c.yesVotes + c.noVotes;
         if (total == 0) return 0;
         return (c.yesVotes * 10000) / total;
+    }
+
+    /**
+     * @notice 附加AI分析报告哈希（仅admin）
+     * @param caseId 案件ID
+     * @param analysisHash IPFS哈希
+     */
+    function attachAnalysis(uint256 caseId, bytes32 analysisHash) external onlyAdmin {
+        require(cases[caseId].caseId != 0, "ConstitutionCourt: case not found");
+        caseAnalysisHashes[caseId] = analysisHash;
+    }
+
+    /**
+     * @notice 附加模拟结果哈希（仅admin）
+     * @param caseId 案件ID
+     * @param simulationHash IPFS哈希
+     */
+    function attachSimulation(uint256 caseId, bytes32 simulationHash) external onlyAdmin {
+        require(cases[caseId].caseId != 0, "ConstitutionCourt: case not found");
+        caseSimulationHashes[caseId] = simulationHash;
+    }
+
+    /**
+     * @notice 获取案件完整元数据（含分析/模拟）
+     * @param caseId 案件ID
+     * @return analysisHash AI分析报告哈希
+     * @return simulationHash 模拟结果哈希
+     * @return approvalRate 当前赞成率（基点）
+     * @return timeRemaining 投票剩余时间（秒）
+     */
+    function getCaseMetadata(uint256 caseId) external view returns (
+        bytes32 analysisHash,
+        bytes32 simulationHash,
+        uint256 approvalRate,
+        uint256 timeRemaining
+    ) {
+        ConstitutionCase storage c = cases[caseId];
+        analysisHash = caseAnalysisHashes[caseId];
+        simulationHash = caseSimulationHashes[caseId];
+        uint256 total = c.yesVotes + c.noVotes;
+        approvalRate = total == 0 ? 0 : (c.yesVotes * 10000) / total;
+        timeRemaining = c.votingEnd > block.timestamp ? c.votingEnd - block.timestamp : 0;
     }
 
     // =============== Internal Functions ===============

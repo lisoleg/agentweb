@@ -24,6 +24,7 @@ import constitutionRoutes from './constitution';  // V10.0: 宪法治理路由
 import laborMarketRoutes from './labor-market';  // V10.0: AI劳动力市场路由
 import metabolismRoutes from './metabolism';  // V10.0: 新陈代谢路由
 import v11Routes from './v11';  // V11.0: 宪法法院+跨链V2+唤醒+索引路由
+import v12Routes from './v12';  // V12.0: 内生AI裁决+通算一体中继+零知识信用
 import { hottTypeChecker } from '../services/hottTypeChecker';
 import { dualTrackRouter } from '../services/dualTrackRouter';  // V2.0: Dual-Track 双轨桥接器
 
@@ -36,8 +37,8 @@ router.use(phiGatewayMiddleware);
 router.get('/', (_req, res) => {
   res.json({
     name: 'AgentWeb API',
-    version: '11.0.0',  // V11.0: ConstitutionCourt + AgentPassport + SigmaBridgeV2 + HibernationWakeup + LaborIndexer
-    description: 'AgentWeb 西格玛云 - Next-generation digital society infrastructure (Fediverse + Four-Token + IGCTR + SubDAO + Cross-Chain + Taiyi Oracle + Brainwave + Supernode Alignment + Agent Economy Settlement + Survival Anxiety + Adversarial Review + Constitution + AI Labor Market + Metabolism + ConstitutionCourt + AgentPassport + CrossChainV2 + HibernationWakeup + LaborIndexer)',
+    version: '12.0.0',  // V12.0: 6G-Σ融合架构
+    description: 'AgentWeb 西格玛云 - Next-generation digital society infrastructure (6G-Σ融合: 内生AI裁决 + 通算一体中继 + 零知识信用证明)',
     endpoints: {
       auth: '/api/v1/auth',
       did: '/api/v1/did',
@@ -66,9 +67,10 @@ router.get('/', (_req, res) => {
       laborMarket: '/api/v1/labor-market',  // V10.0: AI劳动力市场
       metabolism: '/api/v1/metabolism',      // V10.0: 新陈代谢
       v11: '/api/v11',                        // V11.0: 宪法法院+跨链V2+唤醒+索引
+      v12: '/api/v12',                        // V12.0: 内生AI裁决+通算一体中继+零知识信用
     },
     documentation: process.env.ENABLE_SWAGGER === 'true' ? '/api-docs' : undefined,
-    versionNotes: 'V11.0: ConstitutionCourt + AgentPassport + SigmaBridgeV2 + HibernationWakeup + LaborIndexer'
+    versionNotes: 'V12.0: 6G-Σ融合架构 - 内生AI裁决引擎 + 通算一体中继 + 零知识信用证明'
   });
 });
 
@@ -95,6 +97,9 @@ router.use('/metabolism', metabolismRoutes);        // V10.0: 新陈代谢
 
 // V11.0: Mount V11 routes at /api/v1/v11
 router.use('/v11', v11Routes);
+
+// V12.0: Mount V12 routes at /api/v1/v12
+router.use('/v12', v12Routes);
 
 // =============== HoTT Type Checker Route ===============
 router.get('/hott/types', (_req, res) => {
