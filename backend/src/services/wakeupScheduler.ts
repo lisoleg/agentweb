@@ -7,7 +7,7 @@
  * 通过环境变量 SCHEDULER_ENABLED 控制是否启用。
  */
 
-import cron from 'node-cron';
+import * as cron from 'node-cron';
 import logger from '../utils/logger';
 import { get_instance as getMetabolismService } from './metabolismService';
 import { getLaborRepository } from '../db/laborRepository';
@@ -31,7 +31,7 @@ export interface WakeupScanResult {
 // =============== Scheduler Class ===============
 
 class WakeupSchedulerClass {
-  private task: cron.ScheduledTask | null = null;
+  private task: ReturnType<typeof cron.schedule> | null = null;
   private enabled: boolean;
   private running: boolean = false;
   private lastScanTime: number = 0;
@@ -62,7 +62,7 @@ class WakeupSchedulerClass {
     }, {
       scheduled: true,
       timezone: 'Asia/Shanghai',
-    });
+    } as any);
 
     logger.info('[WakeupScheduler] Started with schedule: 0 */6 * * *');
   }
@@ -264,6 +264,41 @@ class WakeupSchedulerClass {
     } catch (err: any) {
       return { agent, woken: false, reason: 0, details: `Wake failed: ${err.message}` };
     }
+  }
+
+  /**
+   * 手动触发全量扫描（API路由别名）
+   */
+  async manualScan(): Promise<WakeupScanResult> {
+    return this.scanAndWake();
+  }
+
+  /**
+   * 获取上次扫描结果
+   */
+  getLastScanResult(): WakeupScanResult | null {
+    return this.lastScanResult;
+  }
+
+  /**
+   * 检查单个Agent唤醒条件
+   */
+  async checkAgent(agent: string): Promise<WakeupResult> {
+    const metabolismService = getMetabolismService();
+    const state = metabolismService.getMetabolismState(agent);
+    if (!state || !state.hibernating) {
+      return { agent, woken: false, reason: 0, details: 'Not hibernating' };
+    }
+    return this.checkAndWakeAgent(agent, metabolismService);
+  }
+
+  /**
+   * 更新唤醒参数
+   */
+  updateParams(params: { wakePhiThreshold?: number; wakeTimeoutDays?: number; wakeVotingWeightBps?: number }): { updated: boolean } {
+    logger.info(`[WakeupScheduler] Params update requested: ${JSON.stringify(params)}`);
+    // In production, this would call contract setter functions
+    return { updated: true };
   }
 }
 

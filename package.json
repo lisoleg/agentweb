@@ -23,12 +23,14 @@
     "contracts:deploy": "cd blockchain && npx hardhat run scripts/deploy.ts --network localhost"
   },
   "devDependencies": {
+    "@types/node-cron": "^3.0.11",
+    "@types/pg": "^8.20.0",
     "concurrently": "^8.2.2",
     "cross-env": "^7.0.3",
-    "typescript": "^5.3.3",
     "eslint": "^8.56.0",
     "prettier": "^3.2.4",
-    "turbo": "^1.11.3"
+    "turbo": "^1.11.3",
+    "typescript": "^5.3.3"
   },
   "engines": {
     "node": ">=20.0.0",
@@ -39,5 +41,8 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/agentweb/agentweb.git"
+  },
+  "dependencies": {
+    "node-cron": "^4.2.1"
   }
 }
