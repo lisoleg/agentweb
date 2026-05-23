@@ -265,18 +265,18 @@ describe("V12 CreditRating", function () {
   it("should update credit score with weighted dimensions", async function () {
     await creditRating.updateCreditScore(
       agent1.address,
-      { phiScore: 8000, courtScore: 7000, laborScore: 6000, relayScore: 5000 },
+      { phiScore: 8000, courtScore: 7000, laborScore: 6000, relayScore: 5000, gcScore: 5000 },
       hre.ethers.ZeroHash
     );
 
     const score = await creditRating.getCreditScore(agent1.address);
-    expect(score).to.equal(6650);
+    expect(score).to.equal(6400);
   });
 
   it("should assign correct credit grade AAA", async function () {
     await creditRating.updateCreditScore(
       agent1.address,
-      { phiScore: 9500, courtScore: 9500, laborScore: 9500, relayScore: 9500 },
+      { phiScore: 9500, courtScore: 9500, laborScore: 9500, relayScore: 9500, gcScore: 9500 },
       hre.ethers.ZeroHash
     );
     const grade = await creditRating.getCreditGrade(agent1.address);
@@ -286,7 +286,7 @@ describe("V12 CreditRating", function () {
   it("should assign correct credit grade BB", async function () {
     await creditRating.updateCreditScore(
       agent1.address,
-      { phiScore: 5000, courtScore: 5000, laborScore: 5000, relayScore: 5000 },
+      { phiScore: 5000, courtScore: 5000, laborScore: 5000, relayScore: 5000, gcScore: 5000 },
       hre.ethers.ZeroHash
     );
     const grade = await creditRating.getCreditGrade(agent1.address);
@@ -296,29 +296,29 @@ describe("V12 CreditRating", function () {
   it("should generate rating proof on update", async function () {
     await creditRating.updateCreditScore(
       agent1.address,
-      { phiScore: 7000, courtScore: 6000, laborScore: 8000, relayScore: 5000 },
+      { phiScore: 7000, courtScore: 6000, laborScore: 8000, relayScore: 5000, gcScore: 5000 },
       hre.ethers.keccak256(hre.ethers.toUtf8Bytes("evidence"))
     );
 
     const proof = await creditRating.getRatingProof(agent1.address);
     expect(proof.evidenceRoot).to.equal(hre.ethers.keccak256(hre.ethers.toUtf8Bytes("evidence")));
-    expect(proof.phiContribution).to.equal(2100);
-    expect(proof.courtContribution).to.equal(1500);
+    expect(proof.phiContribution).to.equal(1750);
+    expect(proof.courtContribution).to.equal(1200);
     expect(proof.laborContribution).to.equal(2000);
-    expect(proof.relayContribution).to.equal(1000);
+    expect(proof.relayContribution).to.equal(750);
   });
 
   it("should calculate fee multiplier AAA=7000 CCC=15000", async function () {
     await creditRating.updateCreditScore(
       agent1.address,
-      { phiScore: 9500, courtScore: 9500, laborScore: 9500, relayScore: 9500 },
+      { phiScore: 9500, courtScore: 9500, laborScore: 9500, relayScore: 9500, gcScore: 9500 },
       hre.ethers.ZeroHash
     );
     expect(await creditRating.getFeeMultiplier(agent1.address)).to.equal(7000);
 
     await creditRating.updateCreditScore(
       agent2.address,
-      { phiScore: 500, courtScore: 500, laborScore: 500, relayScore: 500 },
+      { phiScore: 500, courtScore: 500, laborScore: 500, relayScore: 500, gcScore: 500 },
       hre.ethers.ZeroHash
     );
     expect(await creditRating.getFeeMultiplier(agent2.address)).to.equal(15000);
@@ -327,14 +327,14 @@ describe("V12 CreditRating", function () {
   it("should allow emergency voting for BBB+ agents", async function () {
     await creditRating.updateCreditScore(
       agent1.address,
-      { phiScore: 7000, courtScore: 7000, laborScore: 7000, relayScore: 7000 },
+      { phiScore: 7000, courtScore: 7000, laborScore: 7000, relayScore: 7000, gcScore: 7000 },
       hre.ethers.ZeroHash
     );
     expect(await creditRating.canVoteEmergency(agent1.address)).to.be.true;
 
     await creditRating.updateCreditScore(
       agent2.address,
-      { phiScore: 5000, courtScore: 5000, laborScore: 5000, relayScore: 5000 },
+      { phiScore: 5000, courtScore: 5000, laborScore: 5000, relayScore: 5000, gcScore: 5000 },
       hre.ethers.ZeroHash
     );
     expect(await creditRating.canVoteEmergency(agent2.address)).to.be.false;
@@ -344,7 +344,7 @@ describe("V12 CreditRating", function () {
     // Score=8000 → AA grade (≥8000) → can vouch
     await creditRating.updateCreditScore(
       agent1.address,
-      { phiScore: 8000, courtScore: 8000, laborScore: 8000, relayScore: 8000 },
+      { phiScore: 8000, courtScore: 8000, laborScore: 8000, relayScore: 8000, gcScore: 8000 },
       hre.ethers.ZeroHash
     );
     expect(await creditRating.canVouch(agent1.address)).to.be.true;
@@ -352,7 +352,7 @@ describe("V12 CreditRating", function () {
     // Score=7650 → A grade (7000-7999) → can vouch
     await creditRating.updateCreditScore(
       agent2.address,
-      { phiScore: 9000, courtScore: 8000, laborScore: 7000, relayScore: 6000 },
+      { phiScore: 9000, courtScore: 8000, laborScore: 7000, relayScore: 6000, gcScore: 6000 },
       hre.ethers.ZeroHash
     );
     expect(await creditRating.canVouch(agent2.address)).to.be.true;
@@ -362,7 +362,7 @@ describe("V12 CreditRating", function () {
     await expect(
       creditRating.updateCreditScore(
         agent1.address,
-        { phiScore: 8000, courtScore: 8000, laborScore: 8000, relayScore: 8000 },
+        { phiScore: 8000, courtScore: 8000, laborScore: 8000, relayScore: 8000, gcScore: 8000 },
         hre.ethers.ZeroHash
       )
     ).to.emit(creditRating, "CreditUpdated");
@@ -371,14 +371,14 @@ describe("V12 CreditRating", function () {
   it("should emit GradeChanged event when grade changes", async function () {
     await creditRating.updateCreditScore(
       agent1.address,
-      { phiScore: 8000, courtScore: 8000, laborScore: 8000, relayScore: 8000 },
+      { phiScore: 8000, courtScore: 8000, laborScore: 8000, relayScore: 8000, gcScore: 8000 },
       hre.ethers.ZeroHash
     );
 
     await expect(
       creditRating.updateCreditScore(
         agent1.address,
-        { phiScore: 3000, courtScore: 3000, laborScore: 3000, relayScore: 3000 },
+        { phiScore: 3000, courtScore: 3000, laborScore: 3000, relayScore: 3000, gcScore: 3000 },
         hre.ethers.ZeroHash
       )
     ).to.emit(creditRating, "GradeChanged");
@@ -388,7 +388,7 @@ describe("V12 CreditRating", function () {
     await expect(
       creditRating.updateCreditScore(
         agent1.address,
-        { phiScore: 10001, courtScore: 5000, laborScore: 5000, relayScore: 5000 },
+        { phiScore: 10001, courtScore: 5000, laborScore: 5000, relayScore: 5000, gcScore: 5000 },
         hre.ethers.ZeroHash
       )
     ).to.be.revertedWith("CreditRating: phiScore overflow");
@@ -397,7 +397,7 @@ describe("V12 CreditRating", function () {
   it("should apply credit decay", async function () {
     await creditRating.updateCreditScore(
       agent1.address,
-      { phiScore: 8000, courtScore: 8000, laborScore: 8000, relayScore: 8000 },
+      { phiScore: 8000, courtScore: 8000, laborScore: 8000, relayScore: 8000, gcScore: 8000 },
       hre.ethers.ZeroHash
     );
 
@@ -416,7 +416,7 @@ describe("V12 CreditRating", function () {
   it("should reject decay if not enough time passed", async function () {
     await creditRating.updateCreditScore(
       agent1.address,
-      { phiScore: 8000, courtScore: 8000, laborScore: 8000, relayScore: 8000 },
+      { phiScore: 8000, courtScore: 8000, laborScore: 8000, relayScore: 8000, gcScore: 8000 },
       hre.ethers.ZeroHash
     );
 
@@ -438,12 +438,12 @@ describe("V12 CreditRating", function () {
   it("should return full credit info", async function () {
     await creditRating.updateCreditScore(
       agent1.address,
-      { phiScore: 9000, courtScore: 8000, laborScore: 7000, relayScore: 6000 },
+      { phiScore: 9000, courtScore: 8000, laborScore: 7000, relayScore: 6000, gcScore: 6000 },
       hre.ethers.ZeroHash
     );
 
     const info = await creditRating.getFullCredit(agent1.address);
-    expect(info.totalScore).to.equal(7650);
+    expect(info.totalScore).to.equal(7400);
     expect(info.grade).to.equal(2); // A
     expect(info.phiScore).to.equal(9000);
   });
@@ -552,7 +552,7 @@ describe("V12 ReputationStaking", function () {
   it("should create a vouch", async function () {
     await creditRating.updateCreditScore(
       agent1.address,
-      { phiScore: 8000, courtScore: 8000, laborScore: 8000, relayScore: 8000 },
+      { phiScore: 8000, courtScore: 8000, laborScore: 8000, relayScore: 8000, gcScore: 8000 },
       hre.ethers.ZeroHash
     );
 
@@ -568,7 +568,7 @@ describe("V12 ReputationStaking", function () {
   it("should reject self-vouch", async function () {
     await creditRating.updateCreditScore(
       agent1.address,
-      { phiScore: 8000, courtScore: 8000, laborScore: 8000, relayScore: 8000 },
+      { phiScore: 8000, courtScore: 8000, laborScore: 8000, relayScore: 8000, gcScore: 8000 },
       hre.ethers.ZeroHash
     );
 
@@ -582,7 +582,7 @@ describe("V12 ReputationStaking", function () {
   it("should reject vouch from non-eligible agent", async function () {
     await creditRating.updateCreditScore(
       agent1.address,
-      { phiScore: 500, courtScore: 500, laborScore: 500, relayScore: 500 },
+      { phiScore: 500, courtScore: 500, laborScore: 500, relayScore: 500, gcScore: 500 },
       hre.ethers.ZeroHash
     );
 
@@ -596,7 +596,7 @@ describe("V12 ReputationStaking", function () {
   it("should slash vouch on violation", async function () {
     await creditRating.updateCreditScore(
       agent1.address,
-      { phiScore: 8000, courtScore: 8000, laborScore: 8000, relayScore: 8000 },
+      { phiScore: 8000, courtScore: 8000, laborScore: 8000, relayScore: 8000, gcScore: 8000 },
       hre.ethers.ZeroHash
     );
 
@@ -614,7 +614,7 @@ describe("V12 ReputationStaking", function () {
   it("should release vouch after hold period", async function () {
     await creditRating.updateCreditScore(
       agent1.address,
-      { phiScore: 8000, courtScore: 8000, laborScore: 8000, relayScore: 8000 },
+      { phiScore: 8000, courtScore: 8000, laborScore: 8000, relayScore: 8000, gcScore: 8000 },
       hre.ethers.ZeroHash
     );
 

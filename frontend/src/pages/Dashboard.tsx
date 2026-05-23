@@ -94,6 +94,9 @@ function Dashboard() {
           <a href="/credit" className="action-btn">
             🏆 Credit (V12)
           </a>
+          <a href="/gc-ancor" className="action-btn">
+            ⚓ GC Ancor (V12.5)
+          </a>
         </div>
       </div>
 

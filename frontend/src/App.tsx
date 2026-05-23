@@ -12,6 +12,7 @@ import NewsFeed from './pages/NewsFeed';
 import CognitiveMonitor from './pages/CognitiveMonitor';
 import Relay from './pages/Relay';
 import Credit from './pages/Credit';
+import GcAncor from './pages/GcAncor';
 import Login from './pages/Login';
 import { useAuth } from './hooks/useAuth';
 
@@ -101,6 +102,15 @@ function App() {
           element={
             <ProtectedRoute>
               <Credit />
+            </ProtectedRoute>
+          }
+        />
+        {/* V12.5 Routes */}
+        <Route
+          path="/gc-ancor"
+          element={
+            <ProtectedRoute>
+              <GcAncor />
             </ProtectedRoute>
           }
         />

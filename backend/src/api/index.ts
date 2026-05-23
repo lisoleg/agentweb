@@ -37,8 +37,8 @@ router.use(phiGatewayMiddleware);
 router.get('/', (_req, res) => {
   res.json({
     name: 'AgentWeb API',
-    version: '12.0.0',  // V12.0: 6G-Σ融合架构
-    description: 'AgentWeb 西格玛云 - Next-generation digital society infrastructure (6G-Σ融合: 内生AI裁决 + 通算一体中继 + 零知识信用证明)',
+    version: '12.5.0',  // V12.5: GC锚定层自动奖惩
+    description: 'AgentWeb 西格玛云 - Next-generation digital society infrastructure (6G-Σ融合: 内生AI裁决 + 通算一体中继 + 零知识信用证明 + GC锚定层自动奖惩)',
     endpoints: {
       auth: '/api/v1/auth',
       did: '/api/v1/did',
@@ -67,10 +67,10 @@ router.get('/', (_req, res) => {
       laborMarket: '/api/v1/labor-market',  // V10.0: AI劳动力市场
       metabolism: '/api/v1/metabolism',      // V10.0: 新陈代谢
       v11: '/api/v11',                        // V11.0: 宪法法院+跨链V2+唤醒+索引
-      v12: '/api/v12',                        // V12.0: 内生AI裁决+通算一体中继+零知识信用
+      v12: '/api/v12',                        // V12.0+V12.5: 内生AI裁决+通算一体中继+零知识信用+GC锚定层
     },
     documentation: process.env.ENABLE_SWAGGER === 'true' ? '/api-docs' : undefined,
-    versionNotes: 'V12.0: 6G-Σ融合架构 - 内生AI裁决引擎 + 通算一体中继 + 零知识信用证明'
+    versionNotes: 'V12.5: GC锚定层 — "代码即法律"自动奖惩 + 链上职业征信 + "做题家"机制'
   });
 });
 

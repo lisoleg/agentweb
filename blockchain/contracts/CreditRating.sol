@@ -6,12 +6,13 @@ import "@openzeppelin/contracts/utils/Pausable.sol";
 
 /**
  * @title CreditRating
- * @notice V12.0 可信零知识信用证明体系 — 多维度评分+七级等级+推理链+联动
- * @dev 6GNetGPT"模型可信/可解释+数据隐私"思想融合
- *      四维度: Φ贡献(30%) + 法院参与(25%) + 劳动市场(25%) + 中继贡献(20%)
+ * @notice V12.5 可信零知识信用证明体系 — 五维度评分+七级等级+推理链+联动
+ * @dev 6GNetGPT"模型可信/可解释+数据隐私"思想融合 + GSD-Coin锚定层
+ *      五维度: Φ贡献(25%) + 法院参与(20%) + 劳动市场(25%) + 中继贡献(15%) + GC健康度(15%)
  *      七级: AAA/AA/A/BBB/BB/B/CCC
  *      联动: 费率(AAA×0.7~CCC×1.5) + 权限(BBB+紧急投票) + 担保(A+可担保)
  *      衰减: 每30天-100，活跃参与可恢复
+ *      GC维度: 余额/收入稳定性/消费健康度 (来自GCAncor锚定层)
  */
 contract CreditRating is Ownable, Pausable {
 
@@ -22,10 +23,11 @@ contract CreditRating is Ownable, Pausable {
     // =============== Structs ===============
 
     struct CreditDimensions {
-        uint256 phiScore;       // Φ值维度 (权重30%) 0-10000
-        uint256 courtScore;     // 法院参与维度 (权重25%) 0-10000
+        uint256 phiScore;       // Φ值维度 (权重25%) 0-10000
+        uint256 courtScore;     // 法院参与维度 (权重20%) 0-10000
         uint256 laborScore;     // 劳动市场维度 (权重25%) 0-10000
-        uint256 relayScore;     // 中继贡献维度 (权重20%) 0-10000
+        uint256 relayScore;     // 中继贡献维度 (权重15%) 0-10000
+        uint256 gcScore;        // GC健康度维度 (权重15%) 0-10000 — V12.5新增
     }
 
     struct RatingProof {
@@ -35,6 +37,7 @@ contract CreditRating is Ownable, Pausable {
         uint256 courtContribution;
         uint256 laborContribution;
         uint256 relayContribution;
+        uint256 gcContribution;
         uint256 penaltyContribution;
         bytes32 evidenceRoot;
         uint256 timestamp;
@@ -51,10 +54,11 @@ contract CreditRating is Ownable, Pausable {
     // =============== Constants ===============
 
     uint256 public constant DECAY_INTERVAL = 30 days;
-    uint256 public constant PHI_WEIGHT = 3000;     // 30%
-    uint256 public constant COURT_WEIGHT = 2500;   // 25%
+    uint256 public constant PHI_WEIGHT = 2500;     // 25% (was 30%)
+    uint256 public constant COURT_WEIGHT = 2000;   // 20% (was 25%)
     uint256 public constant LABOR_WEIGHT = 2500;   // 25%
-    uint256 public constant RELAY_WEIGHT = 2000;   // 20%
+    uint256 public constant RELAY_WEIGHT = 1500;   // 15% (was 20%)
+    uint256 public constant GC_WEIGHT = 1500;     // 15% — V12.5新增
 
     // =============== State Variables ===============
 
@@ -69,6 +73,9 @@ contract CreditRating is Ownable, Pausable {
 
     /// @notice RelayRegistry合约地址
     address public relayRegistry;
+
+    /// @notice GCAncor合约地址 — V12.5新增
+    address public gcAncor;
 
     /// @notice agent => AgentCredit
     mapping(address => AgentCredit) public agentCredits;
@@ -128,17 +135,19 @@ contract CreditRating is Ownable, Pausable {
         require(dims.courtScore <= 10000, "CreditRating: courtScore overflow");
         require(dims.laborScore <= 10000, "CreditRating: laborScore overflow");
         require(dims.relayScore <= 10000, "CreditRating: relayScore overflow");
+        require(dims.gcScore <= 10000, "CreditRating: gcScore overflow");
 
         AgentCredit storage credit = agentCredits[agent];
         uint256 oldScore = credit.totalScore;
         CreditGrade oldGrade = credit.grade;
 
-        // 加权计算总分
+        // 五维度加权计算总分
         uint256 newScore = (
             dims.phiScore * PHI_WEIGHT +
             dims.courtScore * COURT_WEIGHT +
             dims.laborScore * LABOR_WEIGHT +
-            dims.relayScore * RELAY_WEIGHT
+            dims.relayScore * RELAY_WEIGHT +
+            dims.gcScore * GC_WEIGHT
         ) / 10000;
 
         // 计算各维度贡献值
@@ -146,6 +155,7 @@ contract CreditRating is Ownable, Pausable {
         uint256 courtContrib = dims.courtScore * COURT_WEIGHT / 10000;
         uint256 laborContrib = dims.laborScore * LABOR_WEIGHT / 10000;
         uint256 relayContrib = dims.relayScore * RELAY_WEIGHT / 10000;
+        uint256 gcContrib = dims.gcScore * GC_WEIGHT / 10000;
 
         // 更新信用数据
         credit.totalScore = newScore;
@@ -164,6 +174,7 @@ contract CreditRating is Ownable, Pausable {
             courtContribution: courtContrib,
             laborContribution: laborContrib,
             relayContribution: relayContrib,
+            gcContribution: gcContrib,
             penaltyContribution: 0,
             evidenceRoot: evidenceRoot,
             timestamp: block.timestamp
@@ -234,6 +245,7 @@ contract CreditRating is Ownable, Pausable {
         uint256 courtContribution,
         uint256 laborContribution,
         uint256 relayContribution,
+        uint256 gcContribution,
         uint256 penaltyContribution,
         bytes32 evidenceRoot,
         uint256 timestamp
@@ -246,6 +258,7 @@ contract CreditRating is Ownable, Pausable {
             proof.courtContribution,
             proof.laborContribution,
             proof.relayContribution,
+            proof.gcContribution,
             proof.penaltyContribution,
             proof.evidenceRoot,
             proof.timestamp
@@ -292,6 +305,7 @@ contract CreditRating is Ownable, Pausable {
         uint256 courtScore,
         uint256 laborScore,
         uint256 relayScore,
+        uint256 gcScore,
         uint256 lastUpdated,
         uint256 decayRate
     ) {
@@ -303,6 +317,7 @@ contract CreditRating is Ownable, Pausable {
             credit.dimensions.courtScore,
             credit.dimensions.laborScore,
             credit.dimensions.relayScore,
+            credit.dimensions.gcScore,
             credit.lastUpdated,
             credit.decayRate
         );
@@ -353,6 +368,10 @@ contract CreditRating is Ownable, Pausable {
 
     function setRelayRegistry(address _relayRegistry) external onlyOwner {
         relayRegistry = _relayRegistry;
+    }
+
+    function setGcAncor(address _gcAncor) external onlyOwner {
+        gcAncor = _gcAncor;
     }
 
     function addAdmin(address _admin) external onlyOwner {
