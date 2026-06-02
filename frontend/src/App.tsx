@@ -14,6 +14,9 @@ import Relay from './pages/Relay';
 import Credit from './pages/Credit';
 import GcAncor from './pages/GcAncor';
 import HGSTR from './pages/HGSTR';
+import SentimentITA from './pages/SentimentITA';
+import LiLiFa from './pages/LiLiFa';
+import DAAMetric from './pages/DAAMetric';
 import Login from './pages/Login';
 import { useAuth } from './hooks/useAuth';
 
@@ -121,6 +124,31 @@ function App() {
           element={
             <ProtectedRoute>
               <HGSTR />
+            </ProtectedRoute>
+          }
+        />
+        {/* V14.0 Routes */}
+        <Route
+          path="/sentiment-ita"
+          element={
+            <ProtectedRoute>
+              <SentimentITA />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/li-li-fa"
+          element={
+            <ProtectedRoute>
+              <LiLiFa />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/daa"
+          element={
+            <ProtectedRoute>
+              <DAAMetric />
             </ProtectedRoute>
           }
         />

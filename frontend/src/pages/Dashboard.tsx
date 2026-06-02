@@ -100,6 +100,15 @@ function Dashboard() {
           <a href="/hgstr" className="action-btn">
             🔀 HG-STR (V13.0)
           </a>
+          <a href="/sentiment-ita" className="action-btn">
+            🚨 舆情ITA (V14.0)
+          </a>
+          <a href="/li-li-fa" className="action-btn">
+            ⚖️ 情理法 (V14.0)
+          </a>
+          <a href="/daa" className="action-btn">
+            📏 DAA度量 (V14.0)
+          </a>
         </div>
       </div>
 

@@ -26,6 +26,7 @@ import metabolismRoutes from './metabolism';  // V10.0: 新陈代谢路由
 import v11Routes from './v11';  // V11.0: 宪法法院+跨链V2+唤醒+索引路由
 import v12Routes from './v12';  // V12.0: 内生AI裁决+通算一体中继+零知识信用
 import v13Routes from './v13';  // V13.0: HG-STR类型化边+分层Planner+残存记忆
+import v14Routes from './v14';  // V14.0: 中国式制度优势的技术映射
 import { hottTypeChecker } from '../services/hottTypeChecker';
 import { dualTrackRouter } from '../services/dualTrackRouter';  // V2.0: Dual-Track 双轨桥接器
 
@@ -38,8 +39,8 @@ router.use(phiGatewayMiddleware);
 router.get('/', (_req, res) => {
   res.json({
     name: 'AgentWeb API',
-    version: '13.0.0',  // V13.0: HG-STR异构图时空推理
-    description: 'AgentWeb 西格玛云 - Next-generation digital society infrastructure (HG-STR: 类型化边 + 分层Planner + 残存记忆 + Gossip弱连通)',
+    version: '14.0.0',  // V14.0: 中国式制度优势的技术映射
+    description: 'AgentWeb 西格玛云 - Next-generation digital society infrastructure (Chinese-style Institutional Advantage: Auditor + TokenWeight + SentimentITA + LiLiFa + DAA)',
     endpoints: {
       auth: '/api/v1/auth',
       did: '/api/v1/did',
@@ -70,6 +71,7 @@ router.get('/', (_req, res) => {
       v11: '/api/v11',                        // V11.0: 宪法法院+跨链V2+唤醒+索引
       v12: '/api/v12',                        // V12.0+V12.5: 内生AI裁决+通算一体中继+零知识信用+GC锚定层
       v13: '/api/v13',                        // V13.0: HG-STR类型化边+分层Planner+残存记忆
+      v14: '/api/v14',                        // V14.0: 中国式制度优势(纪委+TokenWeight+舆情ITA+情理法+DAA)
     },
     documentation: process.env.ENABLE_SWAGGER === 'true' ? '/api-docs' : undefined,
     versionNotes: 'V13.0: HG-STR异构图时空推理 — 类型化边 + 分层Planner + ITA-Trigger + 残存记忆'
@@ -105,6 +107,9 @@ router.use('/v12', v12Routes);
 
 // V13.0: Mount V13 routes at /api/v1/v13
 router.use('/v13', v13Routes);
+
+// V14.0: Mount V14 routes at /api/v1/v14 (中国式制度优势的技术映射)
+router.use('/v14', v14Routes);
 
 // =============== HoTT Type Checker Route ===============
 router.get('/hott/types', (_req, res) => {
