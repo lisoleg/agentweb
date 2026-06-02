@@ -25,6 +25,7 @@ import laborMarketRoutes from './labor-market';  // V10.0: AI劳动力市场路�
 import metabolismRoutes from './metabolism';  // V10.0: 新陈代谢路由
 import v11Routes from './v11';  // V11.0: 宪法法院+跨链V2+唤醒+索引路由
 import v12Routes from './v12';  // V12.0: 内生AI裁决+通算一体中继+零知识信用
+import v13Routes from './v13';  // V13.0: HG-STR类型化边+分层Planner+残存记忆
 import { hottTypeChecker } from '../services/hottTypeChecker';
 import { dualTrackRouter } from '../services/dualTrackRouter';  // V2.0: Dual-Track 双轨桥接器
 
@@ -37,8 +38,8 @@ router.use(phiGatewayMiddleware);
 router.get('/', (_req, res) => {
   res.json({
     name: 'AgentWeb API',
-    version: '12.5.0',  // V12.5: GC锚定层自动奖惩
-    description: 'AgentWeb 西格玛云 - Next-generation digital society infrastructure (6G-Σ融合: 内生AI裁决 + 通算一体中继 + 零知识信用证明 + GC锚定层自动奖惩)',
+    version: '13.0.0',  // V13.0: HG-STR异构图时空推理
+    description: 'AgentWeb 西格玛云 - Next-generation digital society infrastructure (HG-STR: 类型化边 + 分层Planner + 残存记忆 + Gossip弱连通)',
     endpoints: {
       auth: '/api/v1/auth',
       did: '/api/v1/did',
@@ -68,9 +69,10 @@ router.get('/', (_req, res) => {
       metabolism: '/api/v1/metabolism',      // V10.0: 新陈代谢
       v11: '/api/v11',                        // V11.0: 宪法法院+跨链V2+唤醒+索引
       v12: '/api/v12',                        // V12.0+V12.5: 内生AI裁决+通算一体中继+零知识信用+GC锚定层
+      v13: '/api/v13',                        // V13.0: HG-STR类型化边+分层Planner+残存记忆
     },
     documentation: process.env.ENABLE_SWAGGER === 'true' ? '/api-docs' : undefined,
-    versionNotes: 'V12.5: GC锚定层 — "代码即法律"自动奖惩 + 链上职业征信 + "做题家"机制'
+    versionNotes: 'V13.0: HG-STR异构图时空推理 — 类型化边 + 分层Planner + ITA-Trigger + 残存记忆'
   });
 });
 
@@ -100,6 +102,9 @@ router.use('/v11', v11Routes);
 
 // V12.0: Mount V12 routes at /api/v1/v12
 router.use('/v12', v12Routes);
+
+// V13.0: Mount V13 routes at /api/v1/v13
+router.use('/v13', v13Routes);
 
 // =============== HoTT Type Checker Route ===============
 router.get('/hott/types', (_req, res) => {

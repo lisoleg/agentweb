@@ -13,6 +13,7 @@ import CognitiveMonitor from './pages/CognitiveMonitor';
 import Relay from './pages/Relay';
 import Credit from './pages/Credit';
 import GcAncor from './pages/GcAncor';
+import HGSTR from './pages/HGSTR';
 import Login from './pages/Login';
 import { useAuth } from './hooks/useAuth';
 
@@ -111,6 +112,15 @@ function App() {
           element={
             <ProtectedRoute>
               <GcAncor />
+            </ProtectedRoute>
+          }
+        />
+        {/* V13.0 Routes */}
+        <Route
+          path="/hgstr"
+          element={
+            <ProtectedRoute>
+              <HGSTR />
             </ProtectedRoute>
           }
         />

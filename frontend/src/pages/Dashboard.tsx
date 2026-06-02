@@ -97,6 +97,9 @@ function Dashboard() {
           <a href="/gc-ancor" className="action-btn">
             ⚓ GC Ancor (V12.5)
           </a>
+          <a href="/hgstr" className="action-btn">
+            🔀 HG-STR (V13.0)
+          </a>
         </div>
       </div>
 
