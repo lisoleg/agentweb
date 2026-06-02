@@ -5,7 +5,7 @@
 //   ② 7G、AgentWeb 与 FPGA 优先 (Φ-field Carrier)
 //   ③ 联邦宇宙即未来 (Fediverse as Φ-field Natural Channel)
 
-import React, { useState, useEffect, useCallback } from 'react";
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Paper,
@@ -206,19 +206,19 @@ export default function AvatarFusion() {
                 <Box sx={{ pl: 2, mb: 2 }}>
                   <Typography variant="body2">
                     <strong>算元 (Calc):</strong> {avatar.fourTokenResonance.calcToken} 
-                    <Chip label={'"我能动多少"'"} size="small" sx={{ ml: 1 }} />
+                    <Chip label="我能动多少" size="small" sx={{ ml: 1 }} />
                   </Typography>
                   <Typography variant="body2">
                     <strong>智元 (Wit):</strong> {avatar.fourTokenResonance.witToken}
-                    <Chip label={'"我值多少"'"} size="small" sx={{ ml: 1 }} />
+                    <Chip label="我值多少" size="small" sx={{ ml: 1 }} />
                   </Typography>
                   <Typography variant="body2">
                     <strong>词元 (Word):</strong> {avatar.fourTokenResonance.wordTokenUsed} used
-                    <Chip label={'"我言/我思什么"'"} size="small" sx={{ ml: 1 }} />
+                    <Chip label="我言/我思什么" size="small" sx={{ ml: 1 }} />
                   </Typography>
                   <Typography variant="body2">
                     <strong>通证 (Pass):</strong> {avatar.fourTokenResonance.passToken || 'null'}
-                    <Chip label={'"我是谁"'"} size="small" sx={{ ml: 1 }} />
+                    <Chip label="我是谁" size="small" sx={{ ml: 1 }} />
                   </Typography>
                 </Box>
                 

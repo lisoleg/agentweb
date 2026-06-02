@@ -5,7 +5,7 @@
 //   ② 7G、AgentWeb 与 FPGA 优先 (Φ-field Carrier)
 //   ③ 联邦宇宙即未来 (Fediverse as Φ-field Natural Channel)
 
-import React, { useState, useEffect, useCallback } from 'react";
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Paper,
@@ -30,8 +30,8 @@ import {
   Tabs,
   Alert,
   CircularProgress
-} from '@mui/material";
-import { api } from '../services/api";
+} from '@mui/material';
+import { api } from '../services/api';
 
 interface Actor {
   id: string;

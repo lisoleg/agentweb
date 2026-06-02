@@ -5,7 +5,7 @@
 //   ② 7G、AgentWeb 与 FPGA 优先 (Φ-field Carrier)
 //   ③ 联邦宇宙即未来 (Fediverse as Φ-field Natural Channel)
 
-import React, { useState, useEffect, useCallback } from 'react";
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Paper,
@@ -29,8 +29,8 @@ import {
   ListItem,
   ListItemText,
   Divider
-} from '@mui/material";
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore";
+} from '@mui/material';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 
 interface Token {
   id: string;
@@ -445,7 +445,7 @@ export default function TokenFour() {
                         <span>
                           Amount: {issuance.amount || 'N/A'}<br/>
                           Issued: {new Date(issuance.issuedAt).toLocaleString()}<br/>
-                          <em>Based on 论文①: 缠绕数 (Winding Number) >=1 → 拓扑相变 → Token 发行</em>
+                          <em>Based on 论文①: 缠绕数 (Winding Number) ≥1 → 拓扑相变 → Token 发行</em>
                         </span>
                       }
                     />

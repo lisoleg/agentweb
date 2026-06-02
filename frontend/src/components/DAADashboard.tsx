@@ -18,7 +18,7 @@ import StraightenIcon from '@mui/icons-material/Straighten';
 import DesktopAccessDisabledIcon from '@mui/icons-material/DesktopAccessDisabled';
 import ReduceCapacityIcon from '@mui/icons-material/ReduceCapacity';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
-importAssessmentIcon from '@mui/icons-material/Assessment';
+import AssessmentIcon from '@mui/icons-material/Assessment';
 import apiClient from '../services/api';
 
 // =============== Types ===============
