@@ -28,14 +28,14 @@ import {
 } from '@mui/material';
 import {
   Refresh as RefreshIcon,
-  Biology as BioIcon,
+  Biotech as BioIcon,
   AcUnit as HibernateIcon,
   LocalFireDepartment as RegenerateIcon,
   TrendingDown as AgingIcon,
   TrendingUp as GrowthIcon,
-  Speed as SpeedIcon,
-  WakeUp as WakeIcon,
-  ElectricBolt as PhiIcon,
+  Dashboard as SpeedIcon,
+  AlarmOn as WakeIcon,
+  Bolt as PhiIcon,
   Timer as TimerIcon,
   Work as WorkIcon,
   HowToVote as VoteIcon,

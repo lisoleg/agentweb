@@ -62,7 +62,7 @@ import {
   CheckCircle as CheckCircleIcon,
   TrendingUp as TrendingUpIcon,
   TrendingDown as TrendingDownIcon,
-  RemoveCircleOutline as NeutralIcon,
+  RemoveCircleOutlined as NeutralIcon,
   Search as SearchIcon,
   Insights as InsightsIcon,
 } from '@mui/icons-material';

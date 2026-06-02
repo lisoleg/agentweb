@@ -4,7 +4,6 @@
  */
 
 import axios, { AxiosInstance, AxiosResponse } from 'axios';
-import { decodeToken, extractTokenFromHeader } from './auth';
 
 // API base URL from environment
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1';

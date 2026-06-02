@@ -136,7 +136,7 @@ export default function ConstitutionPanel() {
             {clauses.map((clause) => (
               <TableRow key={clause.clauseId}>
                 <TableCell>{clause.clauseId}</TableCell>
-                <TableCell fontWeight="bold">{clause.title}</TableCell>
+                <TableCell sx={{ fontWeight: 'bold' }}>{clause.title}</TableCell>
                 <TableCell sx={{ maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis' }}>{clause.content}</TableCell>
                 <TableCell>
                   <Chip

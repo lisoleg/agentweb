@@ -56,7 +56,7 @@ import {
   Error as ErrorIcon,
   HourglassEmpty as PendingIcon,
   Work as LaborIcon,
-  Biology as MetabolismIcon,
+  Science as MetabolismIcon,
 } from '@mui/icons-material';
 
 // V10.0 Panel imports

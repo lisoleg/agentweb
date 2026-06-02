@@ -28,7 +28,8 @@ import {
   List,
   ListItem,
   ListItemText,
-  Divider
+  Divider,
+  TextField
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 
@@ -473,7 +474,7 @@ export default function TokenFour() {
             label="Actor (发送者)"
             fullWidth
             value={offerActor}
-            onChange={(e) => setOfferActor(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setOfferActor(e.target.value)}
             sx={{ mb: 2 }}
           />
           <TextField
@@ -481,7 +482,7 @@ export default function TokenFour() {
             label="Target (接收者)"
             fullWidth
             value={offerTarget}
-            onChange={(e) => setOfferTarget(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setOfferTarget(e.target.value)}
             sx={{ mb: 2 }}
           />
           <TextField
@@ -491,7 +492,7 @@ export default function TokenFour() {
             multiline
             rows={4}
             value={offerData}
-            onChange={(e) => setOfferData(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setOfferData(e.target.value)}
             helperText='Example: {"type":"Calc-Token", "amount":10}'
           />
         </DialogContent>
