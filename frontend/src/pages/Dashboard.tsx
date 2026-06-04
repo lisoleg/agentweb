@@ -109,6 +109,9 @@ function Dashboard() {
           <a href="/daa" className="action-btn">
             📏 DAA度量 (V14.0)
           </a>
+          <a href="/oplc" className="action-btn">
+            🔗 奇正格链 OPLC (V15.0)
+          </a>
         </div>
       </div>
 

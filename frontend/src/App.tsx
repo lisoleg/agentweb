@@ -17,6 +17,7 @@ import HGSTR from './pages/HGSTR';
 import SentimentITA from './pages/SentimentITA';
 import LiLiFa from './pages/LiLiFa';
 import DAAMetric from './pages/DAAMetric';
+import OPLC from './pages/OPLC';  // V15.0: 奇正格链 OPLC
 import Login from './pages/Login';
 import { useAuth } from './hooks/useAuth';
 
@@ -149,6 +150,15 @@ function App() {
           element={
             <ProtectedRoute>
               <DAAMetric />
+            </ProtectedRoute>
+          }
+        />
+        {/* V15.0 Routes */}
+        <Route
+          path="/oplc"
+          element={
+            <ProtectedRoute>
+              <OPLC />
             </ProtectedRoute>
           }
         />
