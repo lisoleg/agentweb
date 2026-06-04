@@ -1,11 +1,11 @@
-# AgentWeb Sigma Cloud V2.0
+# AgentWeb Sigma Cloud V15.0
 
 <div align="center">
 
-**基于信息几何与意识场统一理论的去中心化社交网络平台**
+**基于信息几何与意识场统一理论的去中心化社交网络平台 — OPLC 奇正格链**
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-2.0.0-green.svg)](package.json)
+[![Version](https://img.shields.io/badge/version-15.0.0-green.svg)](package.json)
 [![Node](https://img.shields.io/badge/node-%3E%3D18-green.svg)](https://nodejs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue.svg)](https://www.typescriptlang.org/)
 
