@@ -18,6 +18,7 @@ import SentimentITA from './pages/SentimentITA';
 import LiLiFa from './pages/LiLiFa';
 import DAAMetric from './pages/DAAMetric';
 import OPLC from './pages/OPLC';  // V15.0: 奇正格链 OPLC
+import PPCL from './pages/PPCL';  // V16.0: 隐私保护共识层 PPCL
 import Login from './pages/Login';
 import { useAuth } from './hooks/useAuth';
 
@@ -159,6 +160,15 @@ function App() {
           element={
             <ProtectedRoute>
               <OPLC />
+            </ProtectedRoute>
+          }
+        />
+        {/* V16.0 Routes */}
+        <Route
+          path="/ppcl"
+          element={
+            <ProtectedRoute>
+              <PPCL />
             </ProtectedRoute>
           }
         />

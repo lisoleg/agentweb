@@ -112,6 +112,9 @@ function Dashboard() {
           <a href="/oplc" className="action-btn">
             🔗 奇正格链 OPLC (V15.0)
           </a>
+          <a href="/ppcl" className="action-btn">
+            🔐 隐私保护共识层 PPCL (V16.0)
+          </a>
         </div>
       </div>
 

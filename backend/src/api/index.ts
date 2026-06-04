@@ -28,6 +28,7 @@ import v12Routes from './v12';  // V12.0: 内生AI裁决+通算一体中继+零�
 import v13Routes from './v13';  // V13.0: HG-STR类型化边+分层Planner+残存记忆
 import v14Routes from './v14';  // V14.0: 中国式制度优势的技术映射
 import v15OplcRoutes from './oplc';   // V15.0: 奇正格链 OPLC 三进制逻辑+偏序格+OP-BFT
+import v16PpclRoutes from './ppcl';    // V16.0: 隐私保护共识层 PPCL 加密记录+View Key+ZK合规+透明性债务
 import { hottTypeChecker } from '../services/hottTypeChecker';
 import { dualTrackRouter } from '../services/dualTrackRouter';  // V2.0: Dual-Track 双轨桥接器
 
@@ -40,8 +41,8 @@ router.use(phiGatewayMiddleware);
 router.get('/', (_req, res) => {
   res.json({
     name: 'AgentWeb API',
-    version: '15.0.0',  // V15.0: 奇正格链 OPLC 三进制逻辑+偏序格+OP-BFT
-    description: 'AgentWeb 西格玛云 - Next-generation digital society infrastructure (OPLC: Odd-Positive Lattice Chain — Ternary Logic + Poset + OP-BFT Consensus)',
+    version: '16.0.0',  // V16.0: PPCL隐私保护共识层 + V15.0: 奇正格链 OPLC
+    description: 'AgentWeb 西格玛云 - Next-generation digital society infrastructure (V16.0 PPCL: Privacy-Preserving Consensus Layer — Encrypted Records + View Key + ZK Compliance + Transparency Debt)',
     endpoints: {
       auth: '/api/v1/auth',
       did: '/api/v1/did',
@@ -74,9 +75,10 @@ router.get('/', (_req, res) => {
       v13: '/api/v13',                        // V13.0: HG-STR类型化边+分层Planner+残存记忆
       v14: '/api/v14',                        // V14.0: 中国式制度优势(纪委+TokenWeight+舆情ITA+情理法+DAA)
       v15Oplc: '/api/v15/oplc',               // V15.0: 奇正格链 OPLC 三进制逻辑+偏序格+OP-BFT
+      v16Ppcl: '/api/v16/ppcl',               // V16.0: 隐私保护共识层 PPCL 加密记录+View Key+ZK合规+透明性债务
     },
     documentation: process.env.ENABLE_SWAGGER === 'true' ? '/api-docs' : undefined,
-    versionNotes: 'V15.0: 奇正格链 OPLC — 三进制投票状态机 + 偏序格Poset引擎 + OP-BFT共识 + Merkle Proof验证 + 定理3.1/3.2证明'
+    versionNotes: 'V16.0: PPCL隐私保护共识层 — 加密记录模型(L1) + View Key选择性披露(L2) + ZK零知识合规引擎(L3) + 透明性债务Φ量化; V15.0: OPLC奇正格链 — 三进制投票状态机 + 偏序格Poset引擎 + OP-BFT共识'
   });
 });
 
@@ -115,6 +117,9 @@ router.use('/v14', v14Routes);
 
 // V15.0: Mount OPLC routes at /api/v15/oplc (奇正格链 — 三进制逻辑+偏序格+OP-BFT)
 router.use('/v15/oplc', v15OplcRoutes);
+
+// V16.0: Mount PPCL routes at /api/v16/ppcl (隐私保护共识层 — 加密记录+View Key+ZK合规+透明性债务)
+router.use('/v16/ppcl', v16PpclRoutes);
 
 // =============== HoTT Type Checker Route ===============
 router.get('/hott/types', (_req, res) => {
