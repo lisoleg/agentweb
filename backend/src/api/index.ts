@@ -29,6 +29,7 @@ import v13Routes from './v13';  // V13.0: HG-STR类型化边+分层Planner+残�
 import v14Routes from './v14';  // V14.0: 中国式制度优势的技术映射
 import v15OplcRoutes from './oplc';   // V15.0: 奇正格链 OPLC 三进制逻辑+偏序格+OP-BFT
 import v16PpclRoutes from './ppcl';    // V16.0: 隐私保护共识层 PPCL 加密记录+View Key+ZK合规+透明性债务
+import v17AsgRoutes from './asg';      // V17.0: Agent Security Gateway 四道安全防线+TEE密钥+经济安全池
 import { hottTypeChecker } from '../services/hottTypeChecker';
 import { dualTrackRouter } from '../services/dualTrackRouter';  // V2.0: Dual-Track 双轨桥接器
 
@@ -41,8 +42,8 @@ router.use(phiGatewayMiddleware);
 router.get('/', (_req, res) => {
   res.json({
     name: 'AgentWeb API',
-    version: '16.0.0',  // V16.0: PPCL隐私保护共识层 + V15.0: 奇正格链 OPLC
-    description: 'AgentWeb 西格玛云 - Next-generation digital society infrastructure (V16.0 PPCL: Privacy-Preserving Consensus Layer — Encrypted Records + View Key + ZK Compliance + Transparency Debt)',
+    version: '17.0.0',  // V17.0: ASG Agent Security Gateway + V16.0: PPCL隐私保护共识层 + V15.0: 奇正格链 OPLC
+    description: 'AgentWeb 西格玛云 - Next-generation digital society infrastructure (V17.0 ASG: Agent Security Gateway — 4-Layer Defense + TEE Key Isolation + Economic Safety Pool + Guard/Beast Dual Mode)',
     endpoints: {
       auth: '/api/v1/auth',
       did: '/api/v1/did',
@@ -76,9 +77,10 @@ router.get('/', (_req, res) => {
       v14: '/api/v14',                        // V14.0: 中国式制度优势(纪委+TokenWeight+舆情ITA+情理法+DAA)
       v15Oplc: '/api/v15/oplc',               // V15.0: 奇正格链 OPLC 三进制逻辑+偏序格+OP-BFT
       v16Ppcl: '/api/v16/ppcl',               // V16.0: 隐私保护共识层 PPCL 加密记录+View Key+ZK合规+透明性债务
+      v17Asg: '/api/v17/asg',                 // V17.0: Agent Security Gateway 四道安全防线+TEE密钥+HITL人机回环+经济安全池
     },
     documentation: process.env.ENABLE_SWAGGER === 'true' ? '/api-docs' : undefined,
-    versionNotes: 'V16.0: PPCL隐私保护共识层 — 加密记录模型(L1) + View Key选择性披露(L2) + ZK零知识合规引擎(L3) + 透明性债务Φ量化; V15.0: OPLC奇正格链 — 三进制投票状态机 + 偏序格Poset引擎 + OP-BFT共识'
+    versionNotes: 'V17.0: ASG Agent Security Gateway — L1 DID身份+L2 策略沙箱(Guard/Beast)+L3 三重门控(模拟/威胁/MEV)+L4 HITL人机回环+L5 TEE密钥隔离+L6 经济安全池(Stake/Slashing/赔付); V16.0: PPCL隐私保护共识层; V15.0: OPLC奇正格链'
   });
 });
 
@@ -120,6 +122,9 @@ router.use('/v15/oplc', v15OplcRoutes);
 
 // V16.0: Mount PPCL routes at /api/v16/ppcl (隐私保护共识层 — 加密记录+View Key+ZK合规+透明性债务)
 router.use('/v16/ppcl', v16PpclRoutes);
+
+// V17.0: Mount ASG routes at /api/v17/asg (Agent Security Gateway — 四道安全防线+TEE密钥+HITL+经济安全池)
+router.use('/v17/asg', v17AsgRoutes);
 
 // =============== HoTT Type Checker Route ===============
 router.get('/hott/types', (_req, res) => {

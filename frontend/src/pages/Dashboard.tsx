@@ -115,6 +115,9 @@ function Dashboard() {
           <a href="/ppcl" className="action-btn">
             🔐 隐私保护共识层 PPCL (V16.0)
           </a>
+          <a href="/asg" className="action-btn">
+            🤖 Agent安全网关 ASG (V17.0)
+          </a>
         </div>
       </div>
 

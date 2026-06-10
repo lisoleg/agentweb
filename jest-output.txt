@@ -1,0 +1,230 @@
+2026-06-04 11:51:33 [[32minfo[39m]: [Blockchain] Running in simulation mode (no live chain connection) 
+  console.log
+    ✅ [Φ-BFT] Node registered: node-1 (Φ=0.8000)
+
+      at PhiBFTConsensusClass.registerNode (src/services/phiBftConsensus.ts:131:13)
+
+  console.log
+    ✅ [Φ-BFT] Node registered: node-1 (Φ=0.8000)
+
+      at PhiBFTConsensusClass.registerNode (src/services/phiBftConsensus.ts:131:13)
+
+  console.warn
+    [Φ-BFT] Node node-1 already registered
+
+    [0m [90m 118 |[39m   registerNode(node[33m:[39m [33mOmit[39m[33m<[39m[33mConsensusNode[39m[33m,[39m [32m'lastVoteTime'[39m [33m|[39m [32m'virtualTime'[39m[33m>[39m)[33m:[39m boolean {
+     [90m 119 |[39m     [36mif[39m ([36mthis[39m[33m.[39mnodes[33m.[39mhas(node[33m.[39mid)) {
+    [31m[1m>[22m[39m[90m 120 |[39m       console[33m.[39mwarn([32m`[Φ-BFT] Node ${node.id} already registered`[39m)[33m;[39m
+     [90m     |[39m               [31m[1m^[22m[39m
+     [90m 121 |[39m       [36mreturn[39m [36mfalse[39m[33m;[39m
+     [90m 122 |[39m     }
+     [90m 123 |[39m[0m
+
+      at PhiBFTConsensusClass.registerNode (src/services/phiBftConsensus.ts:120:15)
+      at Object.<anonymous> (src/__tests__/integration.test.ts:47:36)
+
+  console.log
+    ✅ [Φ-BFT] Node registered: node-1 (Φ=0.5000)
+
+      at PhiBFTConsensusClass.registerNode (src/services/phiBftConsensus.ts:131:13)
+
+  console.log
+    🔄 [Φ-BFT] Node node-1 Φ weight updated: 0.9000
+
+      at PhiBFTConsensusClass.updatePhiWeight (src/services/phiBftConsensus.ts:143:13)
+
+  console.log
+    ✅ [Φ-BFT] Node registered: validator-1 (Φ=0.6000)
+
+      at PhiBFTConsensusClass.registerNode (src/services/phiBftConsensus.ts:131:13)
+
+  console.log
+    ✅ [Φ-BFT] Node registered: validator-2 (Φ=0.4000)
+
+      at PhiBFTConsensusClass.registerNode (src/services/phiBftConsensus.ts:131:13)
+
+  console.log
+    📋 [Φ-BFT] Proposal created: proposal_1780545093838_e7dcf52d (required Φ weight: 0.5100)
+
+      at PhiBFTConsensusClass.createProposal (src/services/phiBftConsensus.ts:178:13)
+
+  console.log
+    🗳️ [Φ-BFT] Vote cast: validator-1 → FOR (Φ weight: 0.6000)
+
+      at PhiBFTConsensusClass.castVote (src/services/phiBftConsensus.ts:228:13)
+
+  console.log
+    ✅ [Φ-BFT] Consensus reached: proposal_1780545093838_e7dcf52d (Φ for: 0.6000 / 1.0000)
+
+      at PhiBFTConsensusClass.checkConsensus (src/services/phiBftConsensus.ts:267:15)
+
+  console.log
+    ✅ [Φ-BFT] Node registered: v-1 (Φ=0.6000)
+
+      at PhiBFTConsensusClass.registerNode (src/services/phiBftConsensus.ts:131:13)
+
+  console.log
+    ✅ [Φ-BFT] Node registered: v-2 (Φ=0.4000)
+
+      at PhiBFTConsensusClass.registerNode (src/services/phiBftConsensus.ts:131:13)
+
+  console.log
+    📋 [Φ-BFT] Proposal created: proposal_1780545093891_a7cef5d1 (required Φ weight: 0.5100)
+
+      at PhiBFTConsensusClass.createProposal (src/services/phiBftConsensus.ts:178:13)
+
+  console.log
+    🗳️ [Φ-BFT] Vote cast: v-1 → FOR (Φ weight: 0.6000)
+
+      at PhiBFTConsensusClass.castVote (src/services/phiBftConsensus.ts:228:13)
+
+  console.log
+    ✅ [Φ-BFT] Consensus reached: proposal_1780545093891_a7cef5d1 (Φ for: 0.6000 / 1.0000)
+
+      at PhiBFTConsensusClass.checkConsensus (src/services/phiBftConsensus.ts:267:15)
+
+  console.log
+    ✅ [Φ-BFT] Node registered: non-validator (Φ=0.5000)
+
+      at PhiBFTConsensusClass.registerNode (src/services/phiBftConsensus.ts:131:13)
+
+  console.log
+    ✅ [Φ-BFT] Node registered: v-1 (Φ=0.8000)
+
+      at PhiBFTConsensusClass.registerNode (src/services/phiBftConsensus.ts:131:13)
+
+  console.log
+    ✅ [Φ-BFT] Node registered: v-1 (Φ=0.6000)
+
+      at PhiBFTConsensusClass.registerNode (src/services/phiBftConsensus.ts:131:13)
+
+  console.log
+    📋 [Φ-BFT] Proposal created: proposal_1780545094094_f0424644 (required Φ weight: 0.3060)
+
+      at PhiBFTConsensusClass.createProposal (src/services/phiBftConsensus.ts:178:13)
+
+  console.log
+    🗳️ [Φ-BFT] Vote cast: v-1 → FOR (Φ weight: 0.6000)
+
+      at PhiBFTConsensusClass.castVote (src/services/phiBftConsensus.ts:228:13)
+
+  console.log
+    ✅ [Φ-BFT] Consensus reached: proposal_1780545094094_f0424644 (Φ for: 0.6000 / 0.6000)
+
+      at PhiBFTConsensusClass.checkConsensus (src/services/phiBftConsensus.ts:267:15)
+
+  console.warn
+    [Φ-BFT] Proposal proposal_1780545094094_f0424644 is not in progress
+
+    [0m [90m 199 |[39m
+     [90m 200 |[39m     [36mif[39m (proposal[33m.[39mstatus [33m!==[39m [33mConsensusStatus[39m[33m.[39m[33mIN_PROGRESS[39m) {
+    [31m[1m>[22m[39m[90m 201 |[39m       console[33m.[39mwarn([32m`[Φ-BFT] Proposal ${proposalId} is not in progress`[39m)[33m;[39m
+     [90m     |[39m               [31m[1m^[22m[39m
+     [90m 202 |[39m       [36mreturn[39m [36mnull[39m[33m;[39m
+     [90m 203 |[39m     }
+     [90m 204 |[39m[0m
+
+      at PhiBFTConsensusClass.castVote (src/services/phiBftConsensus.ts:201:15)
+      at Object.<anonymous> (src/__tests__/integration.test.ts:162:35)
+
+  console.log
+    ✅ [Φ-BFT] Node registered: gov-validator (Φ=1.0000)
+
+      at PhiBFTConsensusClass.registerNode (src/services/phiBftConsensus.ts:131:13)
+
+  console.log
+    📋 [Φ-BFT] Proposal created: proposal_1780545097564_da57579d (required Φ weight: 0.5100)
+
+      at PhiBFTConsensusClass.createProposal (src/services/phiBftConsensus.ts:178:13)
+
+  console.log
+    🗳️ [Φ-BFT] Vote cast: gov-validator → FOR (Φ weight: 1.0000)
+
+      at PhiBFTConsensusClass.castVote (src/services/phiBftConsensus.ts:228:13)
+
+  console.log
+    ✅ [Φ-BFT] Consensus reached: proposal_1780545097564_da57579d (Φ for: 1.0000 / 1.0000)
+
+      at PhiBFTConsensusClass.checkConsensus (src/services/phiBftConsensus.ts:267:15)
+
+  console.log
+    ✅ [Φ-BFT] Node registered: high-phi-node (Φ=0.9000)
+
+      at PhiBFTConsensusClass.registerNode (src/services/phiBftConsensus.ts:131:13)
+
+  console.log
+    📋 [Φ-BFT] Proposal created: proposal_1780545097645_d43f6847 (required Φ weight: 0.4590)
+
+      at PhiBFTConsensusClass.createProposal (src/services/phiBftConsensus.ts:178:13)
+
+  console.log
+    🗳️ [Φ-BFT] Vote cast: high-phi-node → FOR (Φ weight: 0.9000)
+
+      at PhiBFTConsensusClass.castVote (src/services/phiBftConsensus.ts:228:13)
+
+  console.log
+    ✅ [Φ-BFT] Consensus reached: proposal_1780545097645_d43f6847 (Φ for: 0.9000 / 0.9000)
+
+      at PhiBFTConsensusClass.checkConsensus (src/services/phiBftConsensus.ts:267:15)
+
+  console.log
+    ✅ [Φ-BFT] Node registered: v-for (Φ=0.3000)
+
+      at PhiBFTConsensusClass.registerNode (src/services/phiBftConsensus.ts:131:13)
+
+  console.log
+    ✅ [Φ-BFT] Node registered: v-against (Φ=0.3000)
+
+      at PhiBFTConsensusClass.registerNode (src/services/phiBftConsensus.ts:131:13)
+
+  console.log
+    📋 [Φ-BFT] Proposal created: proposal_1780545097746_a39da775 (required Φ weight: 0.3060)
+
+      at PhiBFTConsensusClass.createProposal (src/services/phiBftConsensus.ts:178:13)
+
+  console.log
+    🗳️ [Φ-BFT] Vote cast: v-for → FOR (Φ weight: 0.3000)
+
+      at PhiBFTConsensusClass.castVote (src/services/phiBftConsensus.ts:228:13)
+
+  console.log
+    🗳️ [Φ-BFT] Vote cast: v-against → AGAINST (Φ weight: 0.3000)
+
+      at PhiBFTConsensusClass.castVote (src/services/phiBftConsensus.ts:228:13)
+
+PASS src/__tests__/integration.test.ts (32.614 s)
+  Φ-BFT Consensus
+    √ 应能注册共识节点 (262 ms)
+    √ 应能拒绝重复注册 (74 ms)
+    √ 应能更新节点Φ权重 (24 ms)
+    √ 应能创建提案并投票 (52 ms)
+    √ Φ-BFT 应能在>51%权重时达成共识 (31 ms)
+    √ 应能阻止非验证者创建提案 (146 ms)
+    √ 应能正确计算安全系数 (21 ms)
+    √ 应能防止重复投票 (71 ms)
+  Blockchain Service
+    √ 应在模拟模式下运行 (4 ms)
+    √ 应能返回模拟投票权 (4 ms)
+    √ 应能返回模拟质押信息 (6 ms)
+    √ isLiveMode 应返回 false（模拟模式） (2 ms)
+  Φ Calculator (EML一元数)
+    √ 应能导入 PhiCalculator 模块 (267 ms)
+    √ 应能计算 EML Φ 值 (1 ms)
+  Dual-Track Router
+    √ 应能导入 dualTrackRouter 模块 (2933 ms)
+  Φ-Gateway 语义网关
+    √ 应能导入 phiGatewayService 模块 (19 ms)
+  SubDAO 本地化治理
+    √ 应能导入 subDaoService 模块 (70 ms)
+  跨模块集成
+    √ Φ-BFT + BlockchainService: 模拟治理投票流程 (71 ms)
+    √ Φ-BFT + BlockchainService: 高Φ节点单节点共识 (67 ms)
+    √ Blockchain Service: 质押信息→投票权映射 (27 ms)
+    √ Φ-BFT: 反对票可阻止共识 (96 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       21 passed, 21 total
+Snapshots:   0 total
+Time:        33.723 s, estimated 94 s
+Ran all test suites.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?

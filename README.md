@@ -1,11 +1,11 @@
-# AgentWeb Sigma Cloud V16.0
+# AgentWeb Sigma Cloud V17.0
 
 <div align="center">
 
-**基于信息几何与意识场统一理论的去中心化社交网络平台 — OPLC奇正格链 + PPCL隐私保护共识层**
+**基于信息几何与意识场统一理论的去中心化社交网络平台 — OPLC奇正格链 + PPCL隐私保护共识层 + ASG六层Agent安全网关**
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-16.0.0-green.svg)](package.json)
+[![Version](https://img.shields.io/badge/version-17.0.0-green.svg)](package.json)
 [![Node](https://img.shields.io/badge/node-%3E%3D18-green.svg)](https://nodejs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue.svg)](https://www.typescriptlang.org/)
 
@@ -24,6 +24,8 @@ AgentWeb Sigma Cloud V16.0 是一个基于 **IGCTR（信息-几何-意识三重�
 **V15.0 新增：OPLC 奇正格链** — 基于孙子兵法"奇正相生"思想的三进制投票+偏序格Poset+OP-BFT共识。
 
 **V16.0 新增：PPCL 隐私保护共识层** — 基于《稳定币需要隐身》(PANews/Zen) 的三层隐私模型：加密记录(L1) + View Key选择性披露(L2) + ZK零知识合规(L3)。
+
+**V17.0 新增：ASG 六层Agent安全网关** — 受 MetaMask Agent Wallet 启发，为 AI 自主操作构建零信任安全体系：L1 DID身份 + L2 策略沙箱(Guard/Beast) + L3 三阶段门控 + L4 HITL人机回环 + L5 TEE密钥隔离 + L6 经济安全池。
 
 ### 🌟 核心特性
 
@@ -51,6 +53,15 @@ AgentWeb Sigma Cloud V16.0 是一个基于 **IGCTR（信息-几何-意识三重�
 - **L3 合规连接 — ZK 零知识引擎**: 6类证明 — 资金来源(FUNDS_ORIGIN) / 制裁筛查(SANCTION) / KYC(IDENTITY) / 旅行规则(TRAVEL_RULE) / 阈值访问(THRESHOLD) / 余额(BALANCE_PROOF)
 - **透明性债务量化**: 四类成本 × Φ 度量体系 — 商业博弈 / 合规治理 / 安全风险 / 制度设计
 - **定理保证**: 23.1(ZK合规完备性) + 23.2(PPCL改善界≥50%债务降低)
+
+#### V17.0: ASG Agent安全网关
+- **L1 Agent身份注册层**: DID身份 + Ed25519密钥 + Proof of Human (PoH) + 信任分动态评估
+- **L2 策略沙箱引擎**: Guard模式（严格）/ Beast模式（宽松）双轨策略 + 五维约束（消费/限额/协议/资产/时间）
+- **L3 交易门控管线**: 三阶段串行门控 — 模拟执行 → Blockaid威胁扫描 → MEV防护
+- **L4 人机回环 (HITL)**: AI不可自行拍板，2FA推送（push/email/SMS/Telegram），15分钟超时自动拒绝
+- **L5 TEE密钥管理器**: Non-Custodial TEE隔离（Intel SGX/AWS Nitro模拟），BIP32路径派生，24词助记词
+- **L6 经济安全池**: 质押/Slash/赔付三机制，月度赔付预算，类MetaMask Transaction Protection
+- **定理保证**: 24.1(身份唯一性) + 24.2(门控完备性)
 
 ### 🏗️ 系统架构
 
